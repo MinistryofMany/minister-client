@@ -51,15 +51,21 @@ export async function verifyIdTokenPayload(idToken: string, options: VerifyIdTok
   return payload;
 }
 
-// Verify a Minister id_token and return its identity claims.
-export async function verifyMinisterIdToken(idToken: string, options: VerifyIdTokenOptions): Promise<MinisterClaims> {
-  const payload = await verifyIdTokenPayload(idToken, options);
+// Map a verified id_token payload to the public identity claims. Shared by
+// verifyMinisterIdToken and the flow client so the mapping lives in one place.
+export function claimsFromPayload(payload: JWTPayload, raw: string): MinisterClaims {
   return {
     sub: payload.sub as string,
     name: typeof payload["name"] === "string" ? (payload["name"] as string) : undefined,
     picture: typeof payload["picture"] === "string" ? (payload["picture"] as string) : undefined,
-    raw: idToken,
+    raw,
   };
+}
+
+// Verify a Minister id_token and return its identity claims.
+export async function verifyMinisterIdToken(idToken: string, options: VerifyIdTokenOptions): Promise<MinisterClaims> {
+  const payload = await verifyIdTokenPayload(idToken, options);
+  return claimsFromPayload(payload, idToken);
 }
 
 export function _resetIdTokenJwksCache(issuer?: string): void {

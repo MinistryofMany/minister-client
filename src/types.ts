@@ -54,7 +54,11 @@ export interface VerifiedBadge {
   // The credentialSubject claims, validated against the badge's schema
   // (the `id` field is surfaced as `subject`).
   claims: Record<string, unknown>;
-  // The credential subject DID (holder), equal to the id_token `sub`.
+  // The holder's stable Minister DID (did:web:<domain>:users:<id>), taken
+  // from the VC and asserted equal to the VC's own JWT `sub`. NOTE: this is
+  // NOT the id_token `sub` - Minister binds badges to a stable holder DID
+  // while the id_token uses a per-RP pairwise sub, so the two intentionally
+  // differ. Do not compare them.
   subject: string;
   // The original VC JWT, for storage or forwarding.
   raw: string;
@@ -78,7 +82,12 @@ export interface BadgesResult {
 // Result of a successful code exchange: identity plus disclosed badges.
 export interface ExchangeResult {
   claims: MinisterClaims;
+  // Signature-verified, schema-validated badges that were disclosed.
   badges: VerifiedBadge[];
+  // Badges that were disclosed but failed verification (bad signature,
+  // wrong issuer, expired, unknown type, invalid claims). Login still
+  // succeeds; these are surfaced so the app can log or alert.
+  rejected: RejectedBadge[];
 }
 
 // A key source for JWT verification. Either a single resolved key (e.g.

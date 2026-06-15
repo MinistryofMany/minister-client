@@ -149,6 +149,7 @@ describe("OidcCore.exchangeCode", () => {
     expect(result.badges).toHaveLength(1);
     expect(result.badges[0]!.claims).toEqual({ threshold: 21 });
     expect(result.badges[0]!.type).toBe("age-over-21");
+    expect(result.rejected).toEqual([]);
   });
 
   it("returns an empty badge list when minister_badges is absent", async () => {
@@ -248,5 +249,6 @@ describe("OidcCore.exchangeCode", () => {
     });
     const result = await run(idToken);
     expect(result.badges).toEqual([]);
+    expect(result.rejected).toHaveLength(1);
   });
 });

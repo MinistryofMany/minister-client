@@ -1,12 +1,11 @@
 import { createRemoteJWKSet } from "jose";
 
 import { OidcError } from "./errors";
-import { verifyIdTokenPayload } from "./verify-id-token";
+import { verifyIdTokenPayload, claimsFromPayload } from "./verify-id-token";
 import { verifyMinisterBadges } from "./verify-badges";
 import type {
   ExchangeResult,
   KeyInput,
-  MinisterClaims,
   MinisterClientConfig,
 } from "./types";
 
@@ -34,7 +33,13 @@ async function discover(issuer: string): Promise<Discovery> {
         if (!res.ok) {
           throw new OidcError(`OIDC discovery failed: HTTP ${res.status}`);
         }
-        return (await res.json()) as Discovery;
+        const doc = (await res.json()) as Discovery;
+        if (doc.issuer?.replace(/\/$/, "") !== issuer.replace(/\/$/, "")) {
+          throw new OidcError(
+            `OIDC discovery issuer mismatch: configured ${issuer}, document ${doc.issuer}`,
+          );
+        }
+        return doc;
       })
       .catch((cause) => {
         // Don't poison the cache with a rejected promise.
@@ -161,17 +166,12 @@ export class OidcCore {
       nonce: args.expectedNonce,
       key: idKey,
     });
-    const claims: MinisterClaims = {
-      sub: payload.sub as string,
-      name: typeof payload["name"] === "string" ? (payload["name"] as string) : undefined,
-      picture: typeof payload["picture"] === "string" ? (payload["picture"] as string) : undefined,
-      raw: tokens.id_token,
-    };
-    const { badges } = await verifyMinisterBadges(payload, {
+    const claims = claimsFromPayload(payload, tokens.id_token);
+    const { badges, rejected } = await verifyMinisterBadges(payload, {
       issuer: this.issuer,
       key: args.badgeKey,
     });
-    return { claims, badges };
+    return { claims, badges, rejected };
   }
 }
 

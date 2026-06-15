@@ -1,6 +1,7 @@
 // Thrown when a verifiable-credential badge fails verification — bad
 // signature, wrong issuer, malformed envelope, or a subject-binding
 // mismatch. Mirrors `@minister/vc`'s `VcVerificationError`.
+// Its message may include VC-derived text; do not reflect it to untrusted output.
 export class VcVerificationError extends Error {
   constructor(message: string) {
     super(message);
@@ -23,6 +24,7 @@ export class OidcError extends Error {
 // audience, expiry, or nonce. The token is the trust root, so this is a
 // hard failure (distinct from an individual bad badge, which is reported
 // in BadgesResult.rejected rather than thrown).
+// Its message may include token-derived text; do not reflect it to untrusted output.
 export class MinisterTokenError extends Error {
   constructor(message: string) {
     super(message);
