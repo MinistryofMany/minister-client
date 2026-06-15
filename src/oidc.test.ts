@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-import { OidcError } from "./errors";
+import { MinisterTokenError, OidcError } from "./errors";
 import { OidcCore, _resetOidcCaches } from "./oidc";
 import {
   localJwks,
@@ -144,10 +144,11 @@ describe("OidcCore.exchangeCode", () => {
       sub: "pairwise-subject-123",
       name: "Alice",
       picture: "https://img/alice.png",
+      raw: idToken,
     });
     expect(result.badges).toHaveLength(1);
     expect(result.badges[0]!.claims).toEqual({ threshold: 21 });
-    expect(result.badges[0]!.type).toContain("MinisterAgeOver21Credential");
+    expect(result.badges[0]!.type).toBe("age-over-21");
   });
 
   it("returns an empty badge list when minister_badges is absent", async () => {
@@ -168,7 +169,7 @@ describe("OidcCore.exchangeCode", () => {
       audience: CLIENT_ID,
       nonce: "attacker-nonce",
     });
-    await expect(run(idToken)).rejects.toThrow(/nonce mismatch/u);
+    await expect(run(idToken)).rejects.toBeInstanceOf(MinisterTokenError);
   });
 
   it("rejects a wrong audience", async () => {
@@ -178,7 +179,7 @@ describe("OidcCore.exchangeCode", () => {
       audience: "some-other-client",
       nonce: NONCE,
     });
-    await expect(run(idToken)).rejects.toBeInstanceOf(OidcError);
+    await expect(run(idToken)).rejects.toBeInstanceOf(MinisterTokenError);
   });
 
   it("rejects a wrong issuer", async () => {
@@ -188,7 +189,7 @@ describe("OidcCore.exchangeCode", () => {
       audience: CLIENT_ID,
       nonce: NONCE,
     });
-    await expect(run(idToken)).rejects.toBeInstanceOf(OidcError);
+    await expect(run(idToken)).rejects.toBeInstanceOf(MinisterTokenError);
   });
 
   it("rejects an id_token signed by the wrong key", async () => {
@@ -199,7 +200,7 @@ describe("OidcCore.exchangeCode", () => {
       audience: CLIENT_ID,
       nonce: NONCE,
     });
-    await expect(run(idToken)).rejects.toBeInstanceOf(OidcError);
+    await expect(run(idToken)).rejects.toBeInstanceOf(MinisterTokenError);
   });
 
   it("rejects a token response missing id_token", async () => {
@@ -245,6 +246,7 @@ describe("OidcCore.exchangeCode", () => {
       nonce: NONCE,
       ministerBadges: [badBadge],
     });
-    await expect(run(idToken)).rejects.toThrow(/does not match/u);
+    const result = await run(idToken);
+    expect(result.badges).toEqual([]);
   });
 });

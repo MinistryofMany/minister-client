@@ -1,5 +1,5 @@
+import { badgeScope } from "./badges";
 import {
-  badgeScope,
   OidcCore,
   type ExchangeCodeArgs,
   type GetAuthorizationUrlArgs,
@@ -7,13 +7,11 @@ import {
 import { generatePkce, randomUrlToken } from "./pkce";
 import type {
   ExchangeResult,
+  KeyInput,
   MinisterClientConfig,
   PkcePair,
 } from "./types";
-import {
-  verifyMinisterBadge,
-  type VerifyBadgeOptions,
-} from "./verify-badge";
+import { verifyMinisterBadge } from "./verify-badge";
 
 // The relying-party client surface returned by createMinisterClient.
 export interface MinisterClient {
@@ -27,10 +25,10 @@ export interface MinisterClient {
 
   // Verify a single received VC badge against Minister's public keys.
   // Useful for badges received out of band (e.g. share links), not just
-  // those returned from exchangeCode.
+  // those returned from exchangeCode. The client supplies its own issuer.
   verifyMinisterBadge(
     vcJwt: string,
-    options?: VerifyBadgeOptions,
+    options?: { key?: KeyInput },
   ): ReturnType<typeof verifyMinisterBadge>;
 
   // PKCE S256 pair. Keep `verifier` server-side; put `challenge` in the
@@ -57,7 +55,7 @@ export function createMinisterClient(
     getAuthorizationUrl: (args) => core.getAuthorizationUrl(args),
     exchangeCode: (args) => core.exchangeCode(args),
     verifyMinisterBadge: (vcJwt, options) =>
-      verifyMinisterBadge(issuer, vcJwt, options),
+      verifyMinisterBadge(vcJwt, { issuer, key: options?.key }),
     generatePkce: () => generatePkce(),
     randomToken: (bytes) => randomUrlToken(bytes),
     badgeScope: (slug) => badgeScope(slug),

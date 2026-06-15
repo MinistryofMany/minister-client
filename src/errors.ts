@@ -8,8 +8,10 @@ export class VcVerificationError extends Error {
   }
 }
 
-// Thrown when the OIDC flow fails — discovery, token exchange, or
-// id_token verification (signature / iss / aud / nonce).
+// Thrown when the OIDC flow fails for a non-token reason - missing client
+// config, discovery, the token-exchange request, or a malformed token
+// response. id_token verification failures throw MinisterTokenError;
+// individual bad badges are reported in BadgesResult.rejected, not thrown.
 export class OidcError extends Error {
   constructor(message: string) {
     super(message);
