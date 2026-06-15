@@ -21,7 +21,6 @@
   "sideEffects": false,
   "scripts": {
     "build": "tsup",
-    "prepare": "tsup",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
