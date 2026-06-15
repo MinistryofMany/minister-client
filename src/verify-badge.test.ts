@@ -1,123 +1,112 @@
 import { describe, expect, it } from "vitest";
-
-import { VcVerificationError } from "./errors";
-import { makeKeys, signVc } from "./test-helpers";
+import { generateKeyPair, exportJWK, SignJWT } from "jose";
 import { verifyMinisterBadge } from "./verify-badge";
+import { VcVerificationError } from "./errors";
 
-const ISSUER = "https://ministry.id";
-const ISSUER_DID = "did:web:ministry.id";
-const SUBJECT = "did:web:ministry.id:users:alice";
+const ISSUER = "https://ministry.test";
+const DID = "did:web:ministry.test";
+const SUB = "did:web:ministry.test:users:u1";
+
+interface SignOpts {
+  claims?: Record<string, unknown>;
+  credentialType?: string;
+  // credentialSubject.id (the holder DID).
+  subject?: string;
+  // The JWT `sub`; defaults to `subject`. Set independently to exercise
+  // the holder-binding mismatch rejection.
+  jwtSub?: string;
+  // The VC issuer DID; defaults to DID. Override to test issuer rejection.
+  issuerDid?: string;
+  // Absolute `exp` (epoch seconds); omitted when undefined.
+  exp?: number;
+}
+
+// Self-contained offline signer: generates an Ed25519 key, signs a
+// Minister-shaped VC JWT, and exposes the matching public JWK so
+// verification never touches the network.
+async function makeKeyAndSigner() {
+  const { privateKey, publicKey } = await generateKeyPair("EdDSA");
+  const publicJwk = await exportJWK(publicKey);
+  async function signVc(opts: SignOpts = {}) {
+    const subject = opts.subject ?? SUB;
+    const credentialType = opts.credentialType ?? "MinisterEmailDomainCredential";
+    const claims = opts.claims ?? { domain: "a.com" };
+    let signer = new SignJWT({
+      vc: {
+        type: ["VerifiableCredential", credentialType],
+        credentialSubject: { id: subject, ...claims },
+      },
+    })
+      .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" })
+      .setIssuer(opts.issuerDid ?? DID)
+      .setSubject(opts.jwtSub ?? subject)
+      .setIssuedAt();
+    if (opts.exp !== undefined) signer = signer.setExpirationTime(opts.exp);
+    return signer.sign(privateKey);
+  }
+  return { publicJwk, signVc };
+}
 
 describe("verifyMinisterBadge", () => {
-  it("verifies a well-formed VC and returns typed claims", async () => {
-    const keys = await makeKeys();
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: ISSUER_DID,
-      subject: SUBJECT,
-      type: ["VerifiableCredential", "MinisterEmailDomainCredential"],
-      claims: { domain: "example.com" },
-    });
-
-    const badge = await verifyMinisterBadge(ISSUER, vc, {
-      key: keys.publicKey,
-    });
-
-    expect(badge.sub).toBe(SUBJECT);
-    expect(badge.type).toEqual([
-      "VerifiableCredential",
-      "MinisterEmailDomainCredential",
-    ]);
-    expect(badge.claims).toEqual({ domain: "example.com" });
-    // `id` is stripped from claims (surfaced as `sub`).
-    expect(badge.claims).not.toHaveProperty("id");
-    expect(badge.raw).toBe(vc);
+  it("returns a slug-typed, schema-validated badge", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "a.com" } });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.type).toBe("email-domain");
+    expect(badge.claims).toEqual({ domain: "a.com" });
+    expect(badge.subject).toBe(SUB);
+    expect(badge.raw).toBe(jwt);
   });
 
-  it("rejects a tampered token", async () => {
-    const keys = await makeKeys();
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: ISSUER_DID,
-      subject: SUBJECT,
-    });
-    // Flip a character in the signature segment.
-    const parts = vc.split(".");
-    parts[2] = parts[2]!.slice(0, -2) + (parts[2]!.endsWith("AA") ? "BB" : "AA");
-    const tampered = parts.join(".");
-
+  it("rejects an unknown credential type", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { x: 1 }, credentialType: "MinisterMysteryCredential" });
     await expect(
-      verifyMinisterBadge(ISSUER, tampered, { key: keys.publicKey }),
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);
   });
 
-  it("rejects a VC signed by a different key", async () => {
-    const signer = await makeKeys();
-    const attacker = await makeKeys();
-    const vc = await signVc({
-      privateKey: signer.privateKey,
-      issuerDid: ISSUER_DID,
-      subject: SUBJECT,
-    });
-
+  it("rejects claims that fail the schema", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "not-a-domain" } });
     await expect(
-      verifyMinisterBadge(ISSUER, vc, { key: attacker.publicKey }),
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);
   });
 
-  it("rejects a wrong issuer DID", async () => {
-    const keys = await makeKeys();
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: "did:web:evil.example",
-      subject: SUBJECT,
-    });
-
+  it("rejects a badge signed by a different key (bad signature)", async () => {
+    const { signVc } = await makeKeyAndSigner();
+    const other = await makeKeyAndSigner();
+    const jwt = await signVc({});
     await expect(
-      verifyMinisterBadge(ISSUER, vc, { key: keys.publicKey }),
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: other.publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);
   });
 
-  it("rejects the wrong JWT typ", async () => {
-    const keys = await makeKeys();
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: ISSUER_DID,
-      subject: SUBJECT,
-      typ: "JWT",
-    });
-
+  it("rejects a badge from a different issuer DID", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ issuerDid: "did:web:evil.test" });
     await expect(
-      verifyMinisterBadge(ISSUER, vc, { key: keys.publicKey }),
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);
   });
 
-  it("rejects a credentialSubject.id / sub mismatch (holder binding)", async () => {
-    const keys = await makeKeys();
-    // credentialSubject.id = SUBJECT but the JWT sub is someone else.
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: ISSUER_DID,
-      subject: SUBJECT,
-      subOverride: "did:web:ministry.id:users:mallory",
+  it("rejects a holder-binding mismatch (credentialSubject.id != sub)", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({
+      subject: SUB,
+      jwtSub: "did:web:ministry.test:users:someone-else",
     });
-
     await expect(
-      verifyMinisterBadge(ISSUER, vc, { key: keys.publicKey }),
-    ).rejects.toThrow(/does not match/u);
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
+    ).rejects.toBeInstanceOf(VcVerificationError);
   });
 
-  it("derives the issuer DID from an issuer with a port", async () => {
-    const keys = await makeKeys();
-    const vc = await signVc({
-      privateKey: keys.privateKey,
-      issuerDid: "did:web:localhost%3A3000",
-      subject: "did:web:localhost%3A3000:users:dev",
-    });
-
-    const badge = await verifyMinisterBadge("http://localhost:3000", vc, {
-      key: keys.publicKey,
-    });
-    expect(badge.sub).toBe("did:web:localhost%3A3000:users:dev");
+  it("rejects an expired badge", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ exp: Math.floor(Date.now() / 1000) - 3600 });
+    await expect(
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
+    ).rejects.toBeInstanceOf(VcVerificationError);
   });
 });
