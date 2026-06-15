@@ -1,6 +1,6 @@
 {
   "name": "@minister/client",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "TypeScript SDK for OIDC relying parties authenticating users via Minister and consuming W3C verifiable-credential badges.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
@@ -9,10 +9,9 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./auth-js": { "types": "./dist/auth-js.d.ts", "import": "./dist/auth-js.js" },
+    "./badges": { "types": "./dist/badges/index.d.ts", "import": "./dist/badges/index.js" }
   },
   "files": [
     "dist",
