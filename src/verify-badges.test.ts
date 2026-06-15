@@ -14,11 +14,12 @@ async function setup() {
   const publicJwk = await exportJWK(publicKey);
   const signVc = (claims: Record<string, unknown>, ct: string) =>
     new SignJWT({ vc: { type: ["VerifiableCredential", ct], credentialSubject: { id: SUB, ...claims } } })
-      .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" }).setIssuer(DID).setSubject(SUB).sign(privateKey);
+      .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" }).setIssuer(DID).setSubject(SUB)
+      .setIssuedAt().setExpirationTime("1y").sign(privateKey);
   const signId = (over: Record<string, unknown> = {}) =>
     new SignJWT(over)
       .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
-      .setIssuer(ISSUER).setSubject("pairwise").setAudience(CLIENT).setExpirationTime("5m").sign(privateKey);
+      .setIssuer(ISSUER).setSubject("pairwise").setAudience(CLIENT).setIssuedAt().setExpirationTime("5m").sign(privateKey);
   return { publicJwk, signVc, signId };
 }
 

@@ -12,7 +12,7 @@ interface IdOpts {
   aud?: string;
   issuer?: string;
   sub?: string | null; // null => omit subject
-  exp?: number | string;
+  exp?: number | string | null; // defaults to "5m"; null omits exp
 }
 
 async function setup() {
@@ -22,9 +22,10 @@ async function setup() {
     let signer = new SignJWT({ name: "Ada", picture: "p", ...(opts.over ?? {}) })
       .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
       .setIssuer(opts.issuer ?? ISSUER)
-      .setAudience(opts.aud ?? CLIENT);
+      .setAudience(opts.aud ?? CLIENT)
+      .setIssuedAt();
     if (opts.sub !== null) signer = signer.setSubject(opts.sub ?? "pairwise-sub");
-    signer = signer.setExpirationTime(opts.exp ?? "5m");
+    if (opts.exp !== null) signer = signer.setExpirationTime(opts.exp ?? "5m");
     return signer.sign(privateKey);
   }
   return { publicJwk, signId };
@@ -73,6 +74,20 @@ describe("verifyMinisterIdToken", () => {
   it("rejects a token missing sub", async () => {
     const { publicJwk, signId } = await setup();
     await expect(verifyMinisterIdToken(await signId({ sub: null }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk }))
+      .rejects.toBeInstanceOf(MinisterTokenError);
+  });
+  it("rejects a token with no exp", async () => {
+    const { publicJwk, signId } = await setup();
+    await expect(verifyMinisterIdToken(await signId({ exp: null }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk }))
+      .rejects.toBeInstanceOf(MinisterTokenError);
+  });
+  it("rejects a non-EdDSA (HS256) token", async () => {
+    const { publicJwk } = await setup();
+    const hs = await new SignJWT({ name: "Ada" })
+      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setIssuer(ISSUER).setSubject("pairwise-sub").setAudience(CLIENT).setIssuedAt().setExpirationTime("5m")
+      .sign(new TextEncoder().encode("a-shared-secret-of-sufficient-length-000"));
+    await expect(verifyMinisterIdToken(hs, { issuer: ISSUER, clientId: CLIENT, key: publicJwk }))
       .rejects.toBeInstanceOf(MinisterTokenError);
   });
 });

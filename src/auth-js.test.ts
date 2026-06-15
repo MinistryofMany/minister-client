@@ -24,7 +24,7 @@ describe("auth-js adapter", () => {
     const { privateKey, publicKey } = await generateKeyPair("EdDSA");
     const publicJwk = await exportJWK(publicKey);
     const vc = await new SignJWT({ vc: { type: ["VerifiableCredential", "MinisterEmailDomainCredential"], credentialSubject: { id: SUB, domain: "a.com" } } })
-      .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" }).setIssuer(DID).setSubject(SUB).sign(privateKey);
+      .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" }).setIssuer(DID).setSubject(SUB).setIssuedAt().setExpirationTime("1y").sign(privateKey);
     const profile = { sub: SUB, minister_badges: [vc] };
     const { badges } = await ministerBadgesFromProfile(profile, { issuer: ISSUER, key: publicJwk });
     expect(badges.map((b) => b.type)).toEqual(["email-domain"]);

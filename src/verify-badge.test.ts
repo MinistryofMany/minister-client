@@ -17,8 +17,8 @@ interface SignOpts {
   jwtSub?: string;
   // The VC issuer DID; defaults to DID. Override to test issuer rejection.
   issuerDid?: string;
-  // Absolute `exp` (epoch seconds); omitted when undefined.
-  exp?: number;
+  // Absolute exp (epoch seconds); defaults to 1y out; null omits exp entirely.
+  exp?: number | null;
 }
 
 // Self-contained offline signer: generates an Ed25519 key, signs a
@@ -41,7 +41,9 @@ async function makeKeyAndSigner() {
       .setIssuer(opts.issuerDid ?? DID)
       .setSubject(opts.jwtSub ?? subject)
       .setIssuedAt();
-    if (opts.exp !== undefined) signer = signer.setExpirationTime(opts.exp);
+    if (opts.exp !== null) {
+      signer = signer.setExpirationTime(opts.exp ?? Math.floor(Date.now() / 1000) + 31536000);
+    }
     return signer.sign(privateKey);
   }
   return { publicJwk, signVc };
@@ -105,6 +107,14 @@ describe("verifyMinisterBadge", () => {
   it("rejects an expired badge", async () => {
     const { publicJwk, signVc } = await makeKeyAndSigner();
     const jwt = await signVc({ exp: Math.floor(Date.now() / 1000) - 3600 });
+    await expect(
+      verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
+    ).rejects.toBeInstanceOf(VcVerificationError);
+  });
+
+  it("rejects a badge with no exp", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ exp: null });
     await expect(
       verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);

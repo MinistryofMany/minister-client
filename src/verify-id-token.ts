@@ -3,6 +3,7 @@ import { verifyJwt } from "./jwt";
 import { MinisterTokenError } from "./errors";
 import type { KeyInput, MinisterClaims } from "./types";
 
+// Cache key is the trusted RP-config issuer (not request input), so this stays bounded.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 function remoteJwksFor(issuer: string) {
   let set = jwksCache.get(issuer);
@@ -33,6 +34,8 @@ export async function verifyIdTokenPayload(idToken: string, options: VerifyIdTok
     const result = await verifyJwt(idToken, key, {
       issuer,
       algorithms: ["EdDSA"],
+      requiredClaims: ["exp", "iat"],
+      clockTolerance: "30s",
       ...(options.clientId ? { audience: options.clientId } : {}),
     });
     payload = result.payload;

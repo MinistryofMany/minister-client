@@ -13,6 +13,7 @@ import type { KeyInput, VerifiedBadge } from "./types";
 
 // Cache one remote JWKS per issuer for the process lifetime. The set
 // fetches lazily and rotates keys on its own.
+// Cache key is the trusted RP-config issuer (not request input), so this stays bounded.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 function remoteJwksFor(issuer: string): ReturnType<typeof createRemoteJWKSet> {
@@ -53,6 +54,7 @@ export async function verifyMinisterBadge(
       issuer: expectedIss,
       algorithms: ["EdDSA"],
       typ: "vc+jwt",
+      requiredClaims: ["exp"],
     });
     payload = result.payload;
   } catch (cause) {
