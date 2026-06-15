@@ -16,3 +16,14 @@ export class OidcError extends Error {
     this.name = "OidcError";
   }
 }
+
+// Thrown when an id_token itself fails verification - signature, issuer,
+// audience, expiry, or nonce. The token is the trust root, so this is a
+// hard failure (distinct from an individual bad badge, which is reported
+// in BadgesResult.rejected rather than thrown).
+export class MinisterTokenError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "MinisterTokenError";
+  }
+}

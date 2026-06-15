@@ -1,4 +1,5 @@
 import type { JWTVerifyGetKey, KeyLike } from "jose";
+import type { VcVerificationError } from "./errors";
 
 // Configuration for a Minister relying-party client.
 export interface MinisterClientConfig {
@@ -38,23 +39,40 @@ export interface OidcFlowState {
 
 // Identity claims from a verified id_token.
 export interface MinisterClaims {
-  // Pairwise pseudonymous subject — stable per (issuer, clientId).
+  // Pairwise pseudonymous subject - stable per (issuer, clientId).
   sub: string;
   name?: string;
   picture?: string;
+  // The original id_token JWT, for forwarding/storage.
+  raw: string;
 }
 
-// A signature-verified, structurally-validated badge.
+// A signature-verified, schema-validated badge.
 export interface VerifiedBadge {
-  // The VC `type` array, e.g. ["VerifiableCredential", "MinisterEmailDomainCredential"].
-  type: string[];
-  // The `credentialSubject` claims (the `id` field is surfaced as `sub`).
+  // The Minister badge slug, e.g. "age-over-18".
+  type: string;
+  // The credentialSubject claims, validated against the badge's schema
+  // (the `id` field is surfaced as `subject`).
   claims: Record<string, unknown>;
-  // The credential subject DID (the holder), taken from the JWT `sub`.
-  // Asserted to equal `credentialSubject.id`.
-  sub: string;
+  // The credential subject DID (holder), equal to the id_token `sub`.
+  subject: string;
   // The original VC JWT, for storage or forwarding.
   raw: string;
+}
+
+// A badge that failed verification (bad signature, wrong issuer, expired,
+// subject mismatch, unknown type, or invalid claims).
+export interface RejectedBadge {
+  raw: string;
+  error: VcVerificationError;
+}
+
+// The outcome of verifying the badges in a token: the usable badges and
+// the ones that failed (with reasons). verifyBadges never throws on an
+// individual bad badge.
+export interface BadgesResult {
+  badges: VerifiedBadge[];
+  rejected: RejectedBadge[];
 }
 
 // Result of a successful code exchange: identity plus disclosed badges.
