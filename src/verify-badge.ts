@@ -1,5 +1,6 @@
 import { createRemoteJWKSet } from "jose";
 
+import { badgeTypeOf, getBadgeClaimSchema } from "./badges/helpers";
 import { didFromIssuer } from "./did";
 import { verifyJwt } from "./jwt";
 import { VcVerificationError } from "./errors";
@@ -12,6 +13,7 @@ import type { KeyInput, VerifiedBadge } from "./types";
 
 // Cache one remote JWKS per issuer for the process lifetime. The set
 // fetches lazily and rotates keys on its own.
+// Cache key is the trusted RP-config issuer (not request input), so this stays bounded.
 const jwksCache = new Map<string, ReturnType<typeof createRemoteJWKSet>>();
 
 function remoteJwksFor(issuer: string): ReturnType<typeof createRemoteJWKSet> {
@@ -24,9 +26,10 @@ function remoteJwksFor(issuer: string): ReturnType<typeof createRemoteJWKSet> {
 }
 
 export interface VerifyBadgeOptions {
-  // Inject the verification key source (defaults to the remote JWKS at
-  // `${issuer}/.well-known/jwks.json`). Pass a public key in tests so
-  // verification never touches the network.
+  // Minister origin, e.g. "https://ministry.id".
+  issuer: string;
+  // Inject the verification key (defaults to the remote JWKS). Pass a
+  // public JWK in tests so verification never touches the network.
   key?: KeyInput;
 }
 
@@ -38,13 +41,12 @@ export interface VerifyBadgeOptions {
 // could be presented as bound to a subject other than the one the
 // issuer signed them for.
 export async function verifyMinisterBadge(
-  issuer: string,
   vcJwt: string,
-  options: VerifyBadgeOptions = {},
+  options: VerifyBadgeOptions,
 ): Promise<VerifiedBadge> {
-  const normalizedIssuer = issuer.replace(/\/$/, "");
-  const expectedIss = didFromIssuer(normalizedIssuer);
-  const key = options.key ?? remoteJwksFor(normalizedIssuer);
+  const issuer = options.issuer.replace(/\/$/, "");
+  const expectedIss = didFromIssuer(issuer);
+  const key = options.key ?? remoteJwksFor(issuer);
 
   let payload;
   try {
@@ -52,6 +54,7 @@ export async function verifyMinisterBadge(
       issuer: expectedIss,
       algorithms: ["EdDSA"],
       typ: "vc+jwt",
+      requiredClaims: ["exp"],
     });
     payload = result.payload;
   } catch (cause) {
@@ -95,15 +98,32 @@ export async function verifyMinisterBadge(
     );
   }
 
-  // Strip `id` from the surfaced claims — it's redundant with `sub`.
-  const { id: _id, ...claims } = credentialSubject;
+  // Map the VC type to a known Minister badge slug.
+  const slug = badgeTypeOf(vc.type as string[]);
+  if (!slug) {
+    throw new VcVerificationError(
+      `Unknown Minister badge type: ${(vc.type as string[]).join(",")}`,
+    );
+  }
 
-  return {
-    type: vc.type,
-    claims,
-    sub: payload.sub,
-    raw: vcJwt,
-  };
+  // Validate the claims against that badge type's schema. `id` is
+  // stripped — it's redundant with `sub` and not part of the claims.
+  const { id: _id, ...rawClaims } = credentialSubject;
+  const schema = getBadgeClaimSchema(slug);
+  let claims: Record<string, unknown>;
+  try {
+    claims = schema
+      ? (schema.parse(rawClaims) as Record<string, unknown>)
+      : rawClaims;
+  } catch (cause) {
+    throw new VcVerificationError(
+      `Badge ${slug} claims failed validation: ${
+        cause instanceof Error ? cause.message : String(cause)
+      }`,
+    );
+  }
+
+  return { type: slug, claims, subject: payload.sub, raw: vcJwt };
 }
 
 // Test seam: drop the cached remote JWKS for an issuer (or all issuers).

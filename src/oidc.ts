@@ -1,14 +1,12 @@
 import { createRemoteJWKSet } from "jose";
 
 import { OidcError } from "./errors";
-import { verifyJwt } from "./jwt";
-import { verifyMinisterBadge } from "./verify-badge";
+import { verifyIdTokenPayload, claimsFromPayload } from "./verify-id-token";
+import { verifyMinisterBadges } from "./verify-badges";
 import type {
   ExchangeResult,
   KeyInput,
-  MinisterClaims,
   MinisterClientConfig,
-  VerifiedBadge,
 } from "./types";
 
 // The fields of the OIDC discovery document this SDK relies on.
@@ -35,7 +33,13 @@ async function discover(issuer: string): Promise<Discovery> {
         if (!res.ok) {
           throw new OidcError(`OIDC discovery failed: HTTP ${res.status}`);
         }
-        return (await res.json()) as Discovery;
+        const doc = (await res.json()) as Discovery;
+        if (doc.issuer?.replace(/\/$/, "") !== issuer.replace(/\/$/, "")) {
+          throw new OidcError(
+            `OIDC discovery issuer mismatch: configured ${issuer}, document ${doc.issuer}`,
+          );
+        }
+        return doc;
       })
       .catch((cause) => {
         // Don't poison the cache with a rejected promise.
@@ -87,12 +91,6 @@ export interface ExchangeCodeArgs {
   // Inject the badge verification key source (defaults to the remote
   // JWKS at `${issuer}/.well-known/jwks.json`).
   badgeKey?: KeyInput;
-}
-
-// Build the `badge:<slug>` scope string for a badge type, e.g.
-// badgeScope("age-over-21") === "badge:age-over-21".
-export function badgeScope(slug: string): string {
-  return `badge:${slug}`;
 }
 
 // Internal: the OIDC operations bound to a normalized config.
@@ -161,89 +159,19 @@ export class OidcCore {
       throw new OidcError("token response missing id_token");
     }
 
-    const claims = await this.verifyIdToken(
-      tokens.id_token,
-      d,
-      args.expectedNonce,
-      args.idTokenKey,
-    );
-
-    const badges = await this.extractBadges(tokens.id_token, d, args.idTokenKey, args.badgeKey);
-
-    return { claims, badges };
-  }
-
-  private async verifyIdToken(
-    idToken: string,
-    d: Discovery,
-    expectedNonce: string,
-    idTokenKey?: KeyInput,
-  ): Promise<MinisterClaims> {
-    const key = idTokenKey ?? idTokenJwks(this.issuer, d.jwks_uri);
-    let payload;
-    try {
-      const result = await verifyJwt(idToken, key, {
-        issuer: d.issuer,
-        audience: this.clientId,
-        algorithms: ["EdDSA"],
-      });
-      payload = result.payload;
-    } catch (cause) {
-      throw new OidcError(
-        `id_token verification failed: ${cause instanceof Error ? cause.message : String(cause)}`,
-      );
-    }
-
-    if (payload.nonce !== expectedNonce) {
-      throw new OidcError("id_token nonce mismatch");
-    }
-    if (typeof payload.sub !== "string" || payload.sub.length === 0) {
-      throw new OidcError("id_token missing sub");
-    }
-
-    return {
-      sub: payload.sub,
-      name: typeof payload.name === "string" ? payload.name : undefined,
-      picture:
-        typeof payload.picture === "string" ? payload.picture : undefined,
-    };
-  }
-
-  // Re-verify the id_token (cheap; payload already trusted) only to read
-  // the `minister_badges` claim, then verify each VC JWT independently
-  // against Minister's public keys. Re-reading from the verified payload
-  // (rather than threading it out of verifyIdToken) keeps that method's
-  // return surface to the identity claims; the second verify is against
-  // the same cached JWKS.
-  private async extractBadges(
-    idToken: string,
-    d: Discovery,
-    idTokenKey?: KeyInput,
-    badgeKey?: KeyInput,
-  ): Promise<VerifiedBadge[]> {
-    const key = idTokenKey ?? idTokenJwks(this.issuer, d.jwks_uri);
-    const { payload } = await verifyJwt(idToken, key, {
+    const idKey = args.idTokenKey ?? idTokenJwks(this.issuer, d.jwks_uri);
+    const payload = await verifyIdTokenPayload(tokens.id_token, {
       issuer: d.issuer,
-      audience: this.clientId,
-      algorithms: ["EdDSA"],
+      clientId: this.clientId,
+      nonce: args.expectedNonce,
+      key: idKey,
     });
-
-    const raw = payload.minister_badges;
-    if (raw === undefined) return [];
-    if (!Array.isArray(raw)) {
-      throw new OidcError("minister_badges claim is not an array");
-    }
-
-    const badges: VerifiedBadge[] = [];
-    for (const entry of raw) {
-      if (typeof entry !== "string") {
-        throw new OidcError("minister_badges entry is not a string");
-      }
-      badges.push(
-        await verifyMinisterBadge(this.issuer, entry, { key: badgeKey }),
-      );
-    }
-    return badges;
+    const claims = claimsFromPayload(payload, tokens.id_token);
+    const { badges, rejected } = await verifyMinisterBadges(payload, {
+      issuer: this.issuer,
+      key: args.badgeKey,
+    });
+    return { claims, badges, rejected };
   }
 }
 

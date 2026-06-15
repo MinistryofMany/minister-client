@@ -1,52 +1,38 @@
-// @minister/client — OIDC relying-party SDK for Minister.
-//
-// Public API for apps that "Sign in with Minister" and consume the
-// W3C verifiable-credential badges users disclose.
+// @minister/client - Minister relying-party SDK.
 
+// Flow client (for apps hand-rolling OIDC). `createMinisterClient` is the
+// intended surface; the underlying `OidcCore` class stays internal.
 export { createMinisterClient } from "./client";
 export type { MinisterClient } from "./client";
-
-export { OidcCore, badgeScope } from "./oidc";
-export type {
-  GetAuthorizationUrlArgs,
-  ExchangeCodeArgs,
-} from "./oidc";
-
+export type { GetAuthorizationUrlArgs, ExchangeCodeArgs } from "./oidc";
 export { generatePkce, randomUrlToken } from "./pkce";
+export { buildDid, didFromIssuer } from "./did";
 
+// Verification layer
+export { createMinisterVerifier } from "./verifier";
+export type { MinisterVerifier, MinisterVerifierConfig } from "./verifier";
+export { verifyMinisterIdToken } from "./verify-id-token";
+export type { VerifyIdTokenOptions } from "./verify-id-token";
+export { verifyMinisterBadges } from "./verify-badges";
+export type { VerifyBadgesOptions } from "./verify-badges";
 export { verifyMinisterBadge } from "./verify-badge";
 export type { VerifyBadgeOptions } from "./verify-badge";
 
-export { buildDid, didFromIssuer } from "./did";
+// Errors
+export { VcVerificationError, OidcError, MinisterTokenError } from "./errors";
 
-export { VcVerificationError, OidcError } from "./errors";
-
+// Shared types
 export type {
   MinisterClientConfig,
   PkcePair,
   OidcFlowState,
   MinisterClaims,
   VerifiedBadge,
+  RejectedBadge,
+  BadgesResult,
   ExchangeResult,
   KeyInput,
 } from "./types";
 
-// Badge vocabulary (mirrors Minister's registry; see badge-types.ts).
-export {
-  EmailDomainClaims,
-  EmailExactClaims,
-  OAUTH_PROVIDERS,
-  OAuthAccountClaims,
-  AGE_THRESHOLDS,
-  ResidencyCountryClaims,
-  ResidencyStateClaims,
-  ResidencyCityClaims,
-  InviteCodeClaims,
-  TlsnAttestationClaims,
-  getBadgeClaimSchema,
-  knownBadgeTypes,
-} from "./badge-types";
-// Each `*Claims` export above is both a Zod schema (value) and its
-// inferred type, so no separate type re-export is needed. AgeThreshold is
-// type-only.
-export type { AgeThreshold } from "./badge-types";
+// Badge vocabulary (also available standalone at "@minister/client/badges")
+export * from "./badges/index";
