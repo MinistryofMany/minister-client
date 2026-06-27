@@ -74,6 +74,13 @@ export interface GetAuthorizationUrlArgs {
   nonce: string;
   // PKCE S256 code challenge (from `generatePkce().challenge`).
   codeChallenge: string;
+  // Extra authorize-request params appended alongside the standard ones
+  // (e.g. `{ minister_policy: "<b64url>" }`). Keys that collide with a
+  // standard param the SDK sets (response_type, client_id, redirect_uri,
+  // scope, state, nonce, code_challenge, code_challenge_method) are
+  // ignored, so it can never clobber them. Optional; omitting it is a
+  // no-op.
+  extraParams?: Record<string, string>;
 }
 
 export interface ExchangeCodeArgs {
@@ -126,6 +133,12 @@ export class OidcCore {
     u.searchParams.set("nonce", args.nonce);
     u.searchParams.set("code_challenge", args.codeChallenge);
     u.searchParams.set("code_challenge_method", "S256");
+    // Append caller-supplied extra params last, but never let one
+    // override a standard param the SDK just set.
+    for (const [key, value] of Object.entries(args.extraParams ?? {})) {
+      if (u.searchParams.has(key)) continue;
+      u.searchParams.set(key, value);
+    }
     return u.toString();
   }
 

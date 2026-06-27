@@ -80,6 +80,68 @@ describe("OidcCore.getAuthorizationUrl", () => {
     expect(url.searchParams.get("code_challenge_method")).toBe("S256");
   });
 
+  it("appends extraParams (e.g. minister_policy) without clobbering the standard params", async () => {
+    const policy = "eyJhbGwiOlt7ImJhZGdlIjoiYWdlLW92ZXItMjEifV19";
+    const url = new URL(
+      await makeCore().getAuthorizationUrl({
+        scopes: ["openid", "profile", "badge:age-over-21"],
+        state: "the-state",
+        nonce: "the-nonce",
+        codeChallenge: "the-challenge",
+        extraParams: { minister_policy: policy },
+      }),
+    );
+
+    // The extra param lands, URL-decoded back to its original value.
+    expect(url.searchParams.get("minister_policy")).toBe(policy);
+    // And it is URL-encoded on the wire.
+    expect(url.search).toContain(
+      `minister_policy=${encodeURIComponent(policy)}`,
+    );
+    // Standard params are untouched.
+    expect(url.searchParams.get("response_type")).toBe("code");
+    expect(url.searchParams.get("client_id")).toBe(CLIENT_ID);
+    expect(url.searchParams.get("redirect_uri")).toBe(REDIRECT_URI);
+    expect(url.searchParams.get("scope")).toBe(
+      "openid profile badge:age-over-21",
+    );
+    expect(url.searchParams.get("state")).toBe("the-state");
+    expect(url.searchParams.get("nonce")).toBe("the-nonce");
+    expect(url.searchParams.get("code_challenge")).toBe("the-challenge");
+    expect(url.searchParams.get("code_challenge_method")).toBe("S256");
+  });
+
+  it("treats an absent or empty extraParams as a no-op", async () => {
+    const without = await makeCore().getAuthorizationUrl({
+      scopes: ["openid"],
+      state: "s",
+      nonce: "n",
+      codeChallenge: "c",
+    });
+    const withEmpty = await makeCore().getAuthorizationUrl({
+      scopes: ["openid"],
+      state: "s",
+      nonce: "n",
+      codeChallenge: "c",
+      extraParams: {},
+    });
+    expect(withEmpty).toBe(without);
+  });
+
+  it("never lets an extraParam override a standard param", async () => {
+    const url = new URL(
+      await makeCore().getAuthorizationUrl({
+        scopes: ["openid"],
+        state: "real-state",
+        nonce: "n",
+        codeChallenge: "c",
+        extraParams: { state: "forged-state", response_type: "token" },
+      }),
+    );
+    expect(url.searchParams.get("state")).toBe("real-state");
+    expect(url.searchParams.get("response_type")).toBe("code");
+  });
+
   it("rejects an empty scope list", async () => {
     await expect(
       makeCore().getAuthorizationUrl({

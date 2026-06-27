@@ -9,6 +9,7 @@ interface GetAuthorizationUrlArgs {
     state: string;
     nonce: string;
     codeChallenge: string;
+    extraParams?: Record<string, string>;
 }
 interface ExchangeCodeArgs {
     code: string;

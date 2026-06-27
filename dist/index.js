@@ -98,6 +98,10 @@ var OidcCore = class {
     u.searchParams.set("nonce", args.nonce);
     u.searchParams.set("code_challenge", args.codeChallenge);
     u.searchParams.set("code_challenge_method", "S256");
+    for (const [key, value] of Object.entries(args.extraParams ?? {})) {
+      if (u.searchParams.has(key)) continue;
+      u.searchParams.set(key, value);
+    }
     return u.toString();
   }
   // Exchange the authorization code for tokens, verify the id_token
