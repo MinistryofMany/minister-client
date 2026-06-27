@@ -54,11 +54,14 @@ export interface VerifiedBadge {
   // The credentialSubject claims, validated against the badge's schema
   // (the `id` field is surfaced as `subject`).
   claims: Record<string, unknown>;
-  // The holder's stable Minister DID (did:web:<domain>:users:<id>), taken
-  // from the VC and asserted equal to the VC's own JWT `sub`. NOTE: this is
-  // NOT the id_token `sub` - Minister binds badges to a stable holder DID
-  // while the id_token uses a per-RP pairwise sub, so the two intentionally
-  // differ. Do not compare them.
+  // The holder's per-RP PAIRWISE Minister DID (did:web:<domain>:u:<sub>),
+  // taken from the VC and asserted equal to the VC's own JWT `sub`. Minister
+  // re-mints each badge at disclosure under the same pairwise pseudonym it
+  // uses for the id_token `sub`, so this subject is opaque, carries no raw
+  // internal user id, and differs across relying parties (no cross-RP
+  // correlation). The DID's `<sub>` component equals the id_token `sub`, so a
+  // verifier MAY bind a badge to the login by comparing them; this SDK does
+  // not do that comparison automatically.
   subject: string;
   // The original VC JWT, for storage or forwarding.
   raw: string;
