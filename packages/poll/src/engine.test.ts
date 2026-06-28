@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { createPollEngine, type PollEngine } from "./engine.js";
 import { MemoryPollStore, MemoryVoteStore } from "./test-stores.js";
 import { buildCommit } from "./question-types/commit-reveal.js";
+import { seedCommitHash } from "./hash.js";
 import type { VoterHandle } from "./types.js";
 
 const sub = (s: string): VoterHandle => ({ kind: "subject", subject: s });
@@ -195,5 +196,52 @@ describe("raffle resolve through the engine", () => {
     await e.cast("r2", sub("alice"), {});
     await e.transition("r2", "closed");
     expect(await e.resolve("r2")).toMatchObject({ ok: false, code: "not-resolvable" });
+  });
+
+  it("commits a seed-hash at create and reveals the preimage at resolve", async () => {
+    const e = engine();
+    const preimage = "drand:round:2026-06-28";
+    const seedCommit = await seedCommitHash(preimage);
+    await e.create({
+      id: "r3",
+      questionType: "raffle",
+      audienceGate: { open: true },
+      config: { seedCommit },
+    });
+    await e.transition("r3", "open");
+    for (const name of ["alice", "bob", "carol", "dave"]) {
+      expect((await e.cast("r3", sub(name), {})).ok).toBe(true);
+    }
+    await e.transition("r3", "closed");
+
+    // Without the revealed seed, resolve fails closed (the seed lives nowhere yet).
+    expect(await e.resolve("r3")).toMatchObject({ ok: false, code: "not-resolvable" });
+
+    // The revealed preimage drives a verifiable draw.
+    const resolved = await e.resolve("r3", { seed: preimage });
+    expect(resolved.ok).toBe(true);
+    if (resolved.ok && resolved.view.kind === "winner") {
+      expect(resolved.view.seed).toBe(preimage);
+      expect(resolved.view.entrants).toBe(4);
+      expect(resolved.view.winner).not.toBeNull();
+    }
+  });
+
+  it("rejects a wrong revealed preimage against the committed seed-hash", async () => {
+    const e = engine();
+    const seedCommit = await seedCommitHash("the-real-one");
+    await e.create({
+      id: "r4",
+      questionType: "raffle",
+      audienceGate: { open: true },
+      config: { seedCommit },
+    });
+    await e.transition("r4", "open");
+    await e.cast("r4", sub("alice"), {});
+    await e.transition("r4", "closed");
+    expect(await e.resolve("r4", { seed: "a-grinding-attempt" })).toMatchObject({
+      ok: false,
+      code: "not-resolvable",
+    });
   });
 });

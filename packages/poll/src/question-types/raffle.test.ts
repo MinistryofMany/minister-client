@@ -1,6 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { raffle, drawWinner, sortedEntrants, type RaffleVote } from "./raffle.js";
-import { uniformIndex } from "../hash.js";
+import {
+  raffle,
+  drawWinner,
+  sortedEntrants,
+  validatedSortedEntrants,
+  type RaffleVote,
+} from "./raffle.js";
+import { seedCommitHash, uniformIndex } from "../hash.js";
 import type { StoredVote } from "../types.js";
 
 function entrants(nullifiers: string[]): StoredVote<RaffleVote>[] {
@@ -73,6 +79,95 @@ describe("raffle fails closed", () => {
   it("the synchronous resolve refuses (routes through drawWinner)", () => {
     const r = raffle.resolve({ seed: "x" }, entrants(["1"]));
     expect(r).toMatchObject({ ok: false, code: "not-resolvable" });
+  });
+});
+
+describe("raffle fails CLOSED on a poisoned entrant (does not throw out of resolve)", () => {
+  const bad: Array<[string, unknown]> = [
+    ["a non-numeric nullifier", "0xdeadbeef"],
+    ["a signed nullifier", "-1"],
+    ["a whitespace nullifier", " 12 "],
+    ["an empty nullifier", ""],
+    ["a decimal-with-letters nullifier", "12a3"],
+  ];
+  for (const [label, value] of bad) {
+    it(`${label} => typed not-resolvable err, not a throw`, async () => {
+      const votes = [
+        { nullifier: "5", vote: {} },
+        { nullifier: value as string, vote: {} },
+      ] as StoredVote<RaffleVote>[];
+      // Must RESOLVE to a typed error rather than reject/throw.
+      const r = await drawWinner({ seed: "x" }, votes);
+      expect(r).toMatchObject({ ok: false, code: "not-resolvable" });
+    });
+  }
+
+  it("validatedSortedEntrants returns a typed err naming the malformed entrant", () => {
+    const r = validatedSortedEntrants([
+      { nullifier: "5", vote: {} },
+      { nullifier: "bogus", vote: {} },
+    ] as StoredVote<RaffleVote>[]);
+    expect(r).toMatchObject({ ok: false, code: "not-resolvable" });
+  });
+
+  it("all-canonical entrants still validate + sort", () => {
+    const r = validatedSortedEntrants([
+      { nullifier: "100", vote: {} },
+      { nullifier: "3", vote: {} },
+    ] as StoredVote<RaffleVote>[]);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.entrants).toEqual(["3", "100"]);
+  });
+});
+
+describe("raffle resolve-time seed (commit at create, reveal after entries close)", () => {
+  const entered = entrants(["3", "20", "100", "7"]);
+
+  it("draws using the resolve-time seed override when no config seed is set", async () => {
+    const r = await drawWinner({}, entered, { seed: "revealed-preimage" });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.tally.seed).toBe("revealed-preimage");
+      expect(r.tally.entrants).toContain(r.tally.winner);
+    }
+  });
+
+  it("a committed seed-hash is satisfied by the matching revealed preimage", async () => {
+    const preimage = "drand:beacon:round-99";
+    const seedCommit = await seedCommitHash(preimage);
+    const r = await drawWinner({ seedCommit }, entered, { seed: preimage });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.tally.seed).toBe(preimage);
+      // Equivalent to a plain draw from the revealed seed (commit only gates).
+      const plain = await drawWinner({ seed: preimage }, entered);
+      expect(plain.ok).toBe(true);
+      if (plain.ok) expect(r.tally.winner).toBe(plain.tally.winner);
+    }
+  });
+
+  it("a WRONG revealed preimage is rejected (cannot grind the outcome)", async () => {
+    const seedCommit = await seedCommitHash("the-real-preimage");
+    const r = await drawWinner({ seedCommit }, entered, { seed: "a-different-preimage" });
+    expect(r).toMatchObject({ ok: false, code: "not-resolvable" });
+  });
+
+  it("a committed seed-hash with NO revealed seed fails closed", async () => {
+    const seedCommit = await seedCommitHash("p");
+    const r = await drawWinner({ seedCommit }, entered);
+    expect(r).toMatchObject({ ok: false, code: "not-resolvable" });
+  });
+
+  it("resolve-time opts.seed overrides config.seed", async () => {
+    const viaConfig = await drawWinner({ seed: "from-opts" }, entered);
+    const viaOpts = await drawWinner({ seed: "ignored-config-seed" }, entered, {
+      seed: "from-opts",
+    });
+    expect(viaConfig.ok && viaOpts.ok).toBe(true);
+    if (viaConfig.ok && viaOpts.ok) {
+      expect(viaOpts.tally.seed).toBe("from-opts");
+      expect(viaOpts.tally.winner).toBe(viaConfig.tally.winner);
+    }
   });
 });
 

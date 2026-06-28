@@ -43,6 +43,18 @@ export async function commitHash(choice: string, salt: string): Promise<string> 
 }
 
 /**
+ * Domain-separated commitment over a raffle seed preimage:
+ *   H("minister-poll/seed-commit" || US || seedPreimage)
+ * Published at poll create (as RaffleConfig.seedCommit) before entries open; the
+ * preimage is revealed at resolve time and re-hashed here to check it matches.
+ * The domain tag keeps this hash distinct from the commit-reveal vote hash and
+ * the draw hash so the three cannot be cross-substituted.
+ */
+export async function seedCommitHash(seedPreimage: string): Promise<string> {
+  return sha256Hex(`minister-poll/seed-commit${US}${seedPreimage}`);
+}
+
+/**
  * Derive a uniform integer in [0, n) from a public seed, by hashing
  * H("minister-poll/draw" || US || seed || US || counter) until a value below the
  * largest multiple of `n` is found (rejection sampling), eliminating modulo bias.

@@ -48,7 +48,7 @@ export type {
 } from "./result-views.js";
 
 // Hash primitives (commit-reveal binding + raffle draw).
-export { sha256Hex, commitHash, uniformIndex } from "./hash.js";
+export { sha256Hex, commitHash, seedCommitHash, uniformIndex } from "./hash.js";
 
 // The shipped question types + their config/vote/tally types + helpers.
 export * from "./question-types/index.js";

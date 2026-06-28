@@ -17,9 +17,25 @@
 //      each poll's nullifier set is disjoint by construction, a value carried
 //      across polls is meaningless rather than a usable second identity.
 
-import { deriveContextNullifier, toField, FIELD } from "@minister/nullifier";
+import {
+  deriveContextNullifier,
+  deriveContextNullifierFromField,
+  toField,
+  FIELD,
+} from "@minister/nullifier";
 import type { FieldString } from "@minister/membership";
 import type { VoterHandle } from "./types.js";
+
+/**
+ * Per-kind domain-separation tags. The two VoterHandle kinds (a membership-proof
+ * nullifier vs an authenticated subject) live in DISJOINT namespaces, so a
+ * subject "1" and a membership nullifier "1" derive different per-poll values.
+ * The subject tag is prepended to the subject string before it is reduced; the
+ * membership path mixes its tag into the context (its secret is a field VALUE,
+ * not a string, so it cannot be string-prefixed - see deriveVoteNullifier).
+ */
+const SUBJECT_TAG = "sub:";
+const MEMBERSHIP_TAG = "mem:";
 
 /**
  * Reduce a poll id to a BN254 field element the same way @minister/nullifier
@@ -32,30 +48,44 @@ export function pollContextId(pollId: string): bigint {
 }
 
 /**
- * Derive the per-(poll, member) nullifier from a verified voter handle.
+ * Derive the per-(poll, member) nullifier from a verified voter handle. The two
+ * handle kinds are DOMAIN-SEPARATED into disjoint namespaces, so a subject "1"
+ * and a membership nullifier "1" derive DIFFERENT per-poll nullifiers (the map is
+ * not collapsed across kinds):
  *
- *  - subject handle:    deriveContextNullifier(subject, pollContext)
- *                       = poseidon2(toField(subject), pollContext) - exactly the
- *                       ecosystem two-layer nullifier with the poll as context.
+ *  - subject handle:    deriveContextNullifier(SUBJECT_TAG + subject, pollContext)
+ *                       = poseidon2(toField("sub:" + subject), pollContext). The
+ *                       subject is an arbitrary string, correctly byte-reduced by
+ *                       toField; the "sub:" tag puts it in the subject namespace.
  *
- *  - membership handle: deriveContextNullifier(membershipNullifier, pollContext).
- *                       The membership nullifier is ALREADY a field-element
- *                       string, but feeding it back through deriveContextNullifier
- *                       (a) binds it to this pollId so the same member's value
- *                       differs per poll (cross-poll replay prevention), and
- *                       (b) keeps a single derivation path for both handle kinds.
- *                       `toField` on a decimal string is injective enough here:
- *                       distinct membership nullifiers stay distinct after the
- *                       mod-FIELD byte reduction because each is a canonical
- *                       sub-FIELD decimal, so no two members collide.
+ *  - membership handle: deriveContextNullifierFromField(BigInt(n) % FIELD,
+ *                       membershipContext). The membership nullifier is ALREADY a
+ *                       field element, so it is mixed in as a field VALUE
+ *                       (BigInt(n) % FIELD), NOT re-byte-reduced through toField on
+ *                       its decimal string (which would re-hash its digits and is
+ *                       not the identity on field elements). The membership
+ *                       context folds the "mem:" tag into the pollId so this path
+ *                       lands in a disjoint namespace from the subject path while
+ *                       still being per-poll (cross-poll replay prevention).
+ *
+ * Both paths bind the pollId, so the same member's value differs per poll. The
+ * per-(poll, member) nullifier is collision-resistant by the field size (~2^254),
+ * not injective: two field elements colliding under poseidon2 is cryptographically
+ * negligible.
  *
  * The result is returned as a decimal FieldString - the form the VoteStore's
  * UNIQUE index and every donor app store keeps nullifiers in.
  */
 export function deriveVoteNullifier(handle: VoterHandle, pollId: string): FieldString {
-  const ctx = pollContextId(pollId);
-  const secret = handle.kind === "subject" ? handle.subject : handle.membershipNullifier;
-  return deriveContextNullifier(secret, ctx).toString();
+  if (handle.kind === "subject") {
+    const ctx = pollContextId(pollId);
+    return deriveContextNullifier(SUBJECT_TAG + handle.subject, ctx).toString();
+  }
+  // Membership: tag the context so this kind is namespace-disjoint from subject,
+  // and treat the already-field-element nullifier as a VALUE, not a byte string.
+  const ctx = toField(MEMBERSHIP_TAG + pollId);
+  const value = BigInt(handle.membershipNullifier) % FIELD;
+  return deriveContextNullifierFromField(value, ctx).toString();
 }
 
 // Re-export FIELD so consumers / tests can reason about the field bound without a

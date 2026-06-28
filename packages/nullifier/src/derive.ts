@@ -21,6 +21,12 @@ export const FIELD = BigInt(
  * `toField` performs, preserved byte-for-byte so the derived nullifier matches
  * existing on-chain-style anchors. Do not "improve" it; a different reduction
  * is a different nullifier namespace.
+ *
+ * NOTE: this is a byte-reduction for ARBITRARY strings; it is not meant to
+ * re-reduce a value that is ALREADY a field element (e.g. a decimal field-string
+ * nullifier). For that, take the numeric value (`BigInt(n) % FIELD`) and use
+ * `deriveContextNullifierFromField` - feeding the decimal STRING through
+ * `toField` would re-hash its digits and is not the identity on field elements.
  */
 export function toField(s: string): bigint {
   let acc = 0n;
@@ -48,4 +54,20 @@ export function toField(s: string): bigint {
  */
 export function deriveContextNullifier(sub: string, contextId: bigint): bigint {
   return poseidon2([toField(sub), contextId % FIELD]);
+}
+
+/**
+ * Like `deriveContextNullifier`, but the first input is ALREADY a field element
+ * (e.g. a membership proof's nullifier), not an arbitrary string. The value is
+ * reduced modulo FIELD as a numeric VALUE rather than re-byte-reduced through
+ * `toField` on its decimal string:
+ *
+ *   poseidon2(value % FIELD, contextId % FIELD)
+ *
+ * Use this for a secret that is itself a field-string nullifier, so that two
+ * distinct field elements stay distinct (running them through `toField` would
+ * re-hash their decimal digits and is not the identity on field elements).
+ */
+export function deriveContextNullifierFromField(value: bigint, contextId: bigint): bigint {
+  return poseidon2([value % FIELD, contextId % FIELD]);
 }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { createPollEngine } from "./engine.js";
-import { deriveVoteNullifier } from "./cast.js";
+import { deriveVoteNullifier, FIELD } from "./cast.js";
 import { MemoryPollStore, MemoryVoteStore } from "./test-stores.js";
 import type { VoterHandle } from "./types.js";
 
@@ -41,6 +41,33 @@ describe("per-(poll, member) nullifier derivation", () => {
     const v = deriveVoteNullifier(sub("alice"), "poll-1");
     expect(v).toMatch(/^[0-9]+$/);
     expect(BigInt(v)).toBeGreaterThan(0n);
+  });
+
+  it("domain-separates the two handle kinds: subject '1' != membership '1'", () => {
+    // Before the fix both kinds were collapsed into one namespace and the
+    // membership nullifier was byte-reduced via toField on its decimal string, so
+    // a subject "1" and a membership "1" derived the SAME per-poll nullifier.
+    const subjectOne = deriveVoteNullifier(sub("1"), "poll-1");
+    const membershipOne = deriveVoteNullifier(mem("1"), "poll-1");
+    expect(subjectOne).not.toBe(membershipOne);
+
+    // And the separation holds across several shared decimal values + polls.
+    for (const id of ["poll-1", "poll-2", "poll-x"]) {
+      for (const value of ["0", "1", "42", "12345678901234567890"]) {
+        expect(deriveVoteNullifier(sub(value), id)).not.toBe(
+          deriveVoteNullifier(mem(value), id),
+        );
+      }
+    }
+  });
+
+  it("membership nullifier is mixed as a field VALUE, not its decimal string", () => {
+    // A membership nullifier and the SAME value plus FIELD reduce to the same
+    // field element, so they must derive the same per-poll nullifier (proof the
+    // value path reduces numerically rather than byte-reducing the digits).
+    const v = mem("7");
+    const wrapped = mem((BigInt("7") + FIELD).toString());
+    expect(deriveVoteNullifier(v, "poll-1")).toBe(deriveVoteNullifier(wrapped, "poll-1"));
   });
 });
 

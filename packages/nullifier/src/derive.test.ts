@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import { poseidon2 } from "poseidon-lite";
-import { FIELD, toField, deriveContextNullifier } from "./derive.js";
+import {
+  FIELD,
+  toField,
+  deriveContextNullifier,
+  deriveContextNullifierFromField,
+} from "./derive.js";
 
 /**
  * Canonical reference implementation, copied verbatim from Discreetly
@@ -67,6 +72,32 @@ describe("deriveContextNullifier behavior", () => {
     expect(deriveContextNullifier("sub-abc", FIELD + 700n)).toBe(
       deriveContextNullifier("sub-abc", 700n),
     );
+  });
+});
+
+describe("deriveContextNullifierFromField (field VALUE input, not a string)", () => {
+  it("is poseidon2(value % FIELD, contextId % FIELD)", () => {
+    expect(deriveContextNullifierFromField(7n, 700n)).toBe(poseidon2([7n, 700n]));
+  });
+
+  it("reduces the value modulo FIELD as a NUMBER (wrap hits the same anchor)", () => {
+    expect(deriveContextNullifierFromField(FIELD + 7n, 700n)).toBe(
+      deriveContextNullifierFromField(7n, 700n),
+    );
+  });
+
+  it("treats a field element as a value, NOT its decimal byte-reduction", () => {
+    // The whole point of FIX 3: a field element fed as a value must NOT equal the
+    // same decimal run through toField (which re-hashes its digits).
+    expect(deriveContextNullifierFromField(7n, 700n)).not.toBe(
+      deriveContextNullifier("7", 700n),
+    );
+  });
+
+  it("is field-bounded and deterministic", () => {
+    const a = deriveContextNullifierFromField(123456789n, 42n);
+    expect(deriveContextNullifierFromField(123456789n, 42n)).toBe(a);
+    expect(a).toBeLessThan(FIELD);
   });
 });
 

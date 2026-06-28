@@ -24,7 +24,7 @@ import {
   type AnyQuestionType,
 } from "./question-types/index.js";
 import type { CommitRevealConfig, CommitRevealVote } from "./question-types/commit-reveal.js";
-import type { RaffleConfig, RaffleVote } from "./question-types/raffle.js";
+import type { RaffleConfig, RaffleResolveOpts, RaffleVote } from "./question-types/raffle.js";
 import type { Credibility, ResultView } from "./result-views.js";
 import type { PollStore, VoteStore } from "./store.js";
 import type { AudienceGate, Poll, PollLifecycle, StoredVote, VoterHandle } from "./types.js";
@@ -70,9 +70,13 @@ export interface PollEngine {
 
   /**
    * Resolve a poll: compute the final tally, transition to "resolved", and return
-   * the final view. For raffle this runs the seeded, verifiable draw.
+   * the final view. For raffle this runs the seeded, verifiable draw; `opts.seed`
+   * supplies the revealed commit-reveal preimage or beacon value AFTER entries
+   * close (verified against config.seedCommit if one was committed at create).
+   * No opts -> the raffle uses its config seed (backward compatible). `opts` is
+   * ignored by every non-raffle type.
    */
-  resolve(pollId: string): Promise<Result<{ view: ResultView }>>;
+  resolve(pollId: string, opts?: RaffleResolveOpts): Promise<Result<{ view: ResultView }>>;
 }
 
 const LEGAL_TRANSITIONS: Record<PollLifecycle, PollLifecycle[]> = {
@@ -192,7 +196,7 @@ export function createPollEngine(cfg: PollEngineConfig): PollEngine {
       return { ok: true, view: { ...view, credibility: credibility(poll, distinct) } };
     },
 
-    async resolve(pollId): Promise<Result<{ view: ResultView }>> {
+    async resolve(pollId, opts): Promise<Result<{ view: ResultView }>> {
       const poll = await loadPoll(pollId);
       if ("ok" in poll) return poll;
       if (poll.lifecycle !== "closed") {
@@ -209,6 +213,7 @@ export function createPollEngine(cfg: PollEngineConfig): PollEngine {
         resolved = await drawWinner(
           poll.config as RaffleConfig,
           votes as StoredVote<RaffleVote>[],
+          opts,
         );
       } else {
         resolved = qt.resolve(poll.config, votes);

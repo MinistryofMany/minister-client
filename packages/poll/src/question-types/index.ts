@@ -42,5 +42,5 @@ export type {
   CommitRevealTally,
 } from "./commit-reveal.js";
 export { buildCommit, verifyReveal } from "./commit-reveal.js";
-export type { RaffleConfig, RaffleVote, RaffleTally } from "./raffle.js";
-export { drawWinner, sortedEntrants } from "./raffle.js";
+export type { RaffleConfig, RaffleVote, RaffleTally, RaffleResolveOpts } from "./raffle.js";
+export { drawWinner, sortedEntrants, validatedSortedEntrants } from "./raffle.js";
