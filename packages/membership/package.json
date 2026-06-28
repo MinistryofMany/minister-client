@@ -1,0 +1,40 @@
+{
+  "name": "@minister/membership",
+  "version": "0.0.0",
+  "description": "The Semaphore Merkle-group + snapshot + membership-proof primitive behind pluggable seams: a MerkleGroupProvider (per-app eligible leaf set), an optional SnapshotStore (with a package-shipped live no-op store), and a ProofEngine with two shipped engines - semaphoreEngine over @minister/identity (vanilla Semaphore v4, dynamic LeanIMT) and rlnEngine over @minister/rln (RLN, fixed depth-20). Pins every lookup to (context, subTree, root) for authorization, excludes banned/revoked commitments from refreshed roots, and brands the v4 leaf vs the v3 RLN leaf so they cannot be confused. Consumed by FreedInk, Discreetly, and Deforum.",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "author": "AtHeartEngineer",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./client": { "types": "./dist/client.d.ts", "import": "./dist/client.js" }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@minister/identity": "workspace:*",
+    "@minister/rln": "workspace:*",
+    "@semaphore-protocol/group": "^4.0.3",
+    "@semaphore-protocol/proof": "^4.0.3"
+  },
+  "devDependencies": {
+    "@semaphore-protocol/identity": "^4.0.3",
+    "@types/node": "^20.17.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}
