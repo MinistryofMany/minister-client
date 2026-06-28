@@ -1,0 +1,65 @@
+import { describe, it, expect } from "vitest";
+import type {
+  NullifierStore,
+  SlashableNullifierStore,
+  NullifierKey,
+  SharePoint,
+} from "./store.js";
+
+const keyStr = (k: NullifierKey) => `${k.contextId}|${k.nullifier}`;
+
+/** Minimal insert-or-reject store (FreedInk UNIQUE(context, nullifier) shape). */
+class MemoryNullifierStore implements NullifierStore {
+  private seen = new Set<string>();
+  async claim(key: NullifierKey) {
+    const k = keyStr(key);
+    if (this.seen.has(k)) return { status: "replay" as const };
+    this.seen.add(k);
+    return { status: "fresh" as const };
+  }
+}
+
+/** Minimal slashable store (Discreetly RLN collision.ts shape). */
+class MemorySlashableStore implements SlashableNullifierStore {
+  private seen = new Map<string, SharePoint>();
+  async claim(key: NullifierKey, point: SharePoint) {
+    const k = keyStr(key);
+    const prior = this.seen.get(k);
+    if (!prior) {
+      this.seen.set(k, point);
+      return { status: "fresh" as const };
+    }
+    if (prior.x === point.x) return { status: "replay" as const };
+    return { status: "collision" as const, prior };
+  }
+}
+
+describe("NullifierStore contract (insert-or-reject)", () => {
+  it("is fresh once then replay on reuse", async () => {
+    const store = new MemoryNullifierStore();
+    const key: NullifierKey = { contextId: "post-1", nullifier: "123" };
+    expect(await store.claim(key)).toEqual({ status: "fresh" });
+    expect(await store.claim(key)).toEqual({ status: "replay" });
+  });
+
+  it("scopes uniqueness per context", async () => {
+    const store = new MemoryNullifierStore();
+    expect(await store.claim({ contextId: "post-1", nullifier: "9" })).toEqual({ status: "fresh" });
+    expect(await store.claim({ contextId: "post-2", nullifier: "9" })).toEqual({ status: "fresh" });
+  });
+});
+
+describe("SlashableNullifierStore contract (RLN collision)", () => {
+  it("distinguishes a benign replay from a slashable collision", async () => {
+    const store = new MemorySlashableStore();
+    const key: NullifierKey = { contextId: "room-1", nullifier: "n" };
+    expect(await store.claim(key, { x: "1", y: "10" })).toEqual({ status: "fresh" });
+    // Same share point -> benign duplicate.
+    expect(await store.claim(key, { x: "1", y: "10" })).toEqual({ status: "replay" });
+    // Different share point -> rate-limit breach; prior point surfaced.
+    expect(await store.claim(key, { x: "2", y: "20" })).toEqual({
+      status: "collision",
+      prior: { x: "1", y: "10" },
+    });
+  });
+});

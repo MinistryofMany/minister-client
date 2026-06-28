@@ -1,0 +1,42 @@
+{
+  "name": "@minister/rln",
+  "version": "0.0.0",
+  "description": "Quarantine island for Semaphore v3 + RLN (rate-limiting nullifier). Privately bundles Semaphore v3 + rlnjs 3.2.0 + the depth-20 circuit and exposes a bigint-only surface: rate commitment, RLN nullifier, Shamir recovery, signal hash, the depth-20 Merkle root, and the v3 identity-secret derivation/deserializer. Never exports a Semaphore Group or Identity object.",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "author": "AtHeartEngineer",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ethersproject/bytes": "5.7.0",
+    "@ethersproject/keccak256": "5.7.0",
+    "@ethersproject/strings": "5.7.0",
+    "@semaphore-protocol/group": "3.10.1",
+    "ffjavascript": "0.2.60",
+    "poseidon-lite": "0.2.0",
+    "rlnjs": "3.2.0"
+  },
+  "devDependencies": {
+    "@semaphore-protocol/identity": "3.15.0",
+    "@types/node": "^20.17.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

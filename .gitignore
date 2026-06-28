@@ -2,3 +2,8 @@ node_modules/
 *.tsbuildinfo
 .claude/
 docs/superpowers/
+
+# The root @minister/client commits its built dist/ for git-URL consumers.
+# The workspace sub-packages have no external consumer yet, so their build
+# output is rebuildable and stays out of git (no commit-pinned dist to ship).
+packages/*/dist/
