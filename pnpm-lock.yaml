@@ -159,6 +159,31 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.7.5)
 
+  packages/poll:
+    dependencies:
+      '@minister/membership':
+        specifier: workspace:*
+        version: link:../membership
+      '@minister/nullifier':
+        specifier: workspace:*
+        version: link:../nullifier
+      '@minister/policy':
+        specifier: workspace:*
+        version: link:../policy
+      zod:
+        specifier: ^3.24.1
+        version: 3.25.76
+    devDependencies:
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.15)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@22.7.5)
+
   packages/rln:
     dependencies:
       '@ethersproject/bytes':
