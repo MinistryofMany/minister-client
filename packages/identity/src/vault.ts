@@ -21,6 +21,15 @@ import { DEVICE_SEED_BYTES } from "./derive.js";
 /** PBKDF2 iteration count. 600k matches FreedInk's vault and clears the OWASP
  *  PBKDF2-SHA256 floor; both donor apps use >= 210k. */
 export const PBKDF2_ITERATIONS = 600_000;
+
+/** Accepted PBKDF2 iteration bounds for an UNTRUSTED vault envelope. The lower
+ *  bound keeps the KDF above the OWASP PBKDF2-SHA256 floor; the upper bound caps
+ *  attacker-chosen work so a malicious vault JSON cannot pin a huge iteration
+ *  count and hang the victim's CPU (denial of service). The AES-GCM auth tag
+ *  still gates plaintext - this only bounds the work spent reaching it. */
+export const MIN_PBKDF2_ITERATIONS = 100_000;
+export const MAX_PBKDF2_ITERATIONS = 10_000_000;
+
 const PBKDF2_HASH = "SHA-256" as const;
 const SALT_BYTES = 16;
 const IV_BYTES = 12; // AES-GCM nonce
@@ -62,6 +71,21 @@ function randomBytes(n: number): Uint8Array {
     throw new VaultError("WebCrypto (globalThis.crypto.getRandomValues) is not available.");
   }
   return c.getRandomValues(new Uint8Array(n));
+}
+
+/** Reject an iteration count from an untrusted vault that is out of bounds
+ *  before it is fed to PBKDF2 (DoS guard). */
+function assertIterationsInBounds(iterations: number): void {
+  if (
+    !Number.isInteger(iterations) ||
+    iterations < MIN_PBKDF2_ITERATIONS ||
+    iterations > MAX_PBKDF2_ITERATIONS
+  ) {
+    throw new VaultError(
+      `Vault iteration count ${String(iterations)} is out of the accepted range ` +
+        `[${MIN_PBKDF2_ITERATIONS}, ${MAX_PBKDF2_ITERATIONS}].`,
+    );
+  }
 }
 
 // --- base64 helpers (no Buffer dependency; identical encoding to both donors) ---
@@ -134,6 +158,7 @@ export async function encryptSeed(deviceSeed: Uint8Array, password: string): Pro
  */
 export async function decryptSeed(vault: SeedVault, password: string): Promise<Uint8Array> {
   if (vault.v !== 1) throw new VaultError(`Unsupported vault version: ${String(vault.v)}`);
+  assertIterationsInBounds(vault.iterations);
   const s = subtle();
   const salt = fromBase64(vault.salt);
   const iv = fromBase64(vault.iv);
@@ -181,5 +206,6 @@ export function vaultFromJson(json: string): SeedVault {
   ) {
     throw new VaultError("Vault JSON is missing required fields or has the wrong shape.");
   }
+  assertIterationsInBounds((parsed as { iterations: number }).iterations);
   return parsed as SeedVault;
 }

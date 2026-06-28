@@ -14,8 +14,13 @@ export interface VerifyRlnProofParams {
   currentEpoch: bigint;
   /** Allowed epoch skew on each side. Default 1 (matches the legacy verifier). */
   epochErrorRange?: bigint;
-  /** For IDENTITY_LIST rooms: the room group root the proof must match. */
-  expectedRoot?: bigint;
+  /**
+   * The room/group Merkle root the proof MUST match. REQUIRED: the Groth16 proof
+   * binds to whatever root the prover chose, so without pinning it here a prover
+   * could stuff a single-leaf tree with their own rate-commitment and bypass
+   * membership. The caller must supply the server's authoritative current root.
+   */
+  expectedRoot: bigint;
 }
 
 /** Reconstruct the rlnjs RLNFullProof shape from the plain public struct. */
@@ -43,13 +48,17 @@ export async function verifyRlnProof(
     expectedRoot,
   } = params;
 
+  if (typeof expectedRoot !== "bigint") {
+    throw new TypeError("verifyRlnProof requires expectedRoot (the authoritative group root).");
+  }
+
   if (epoch < currentEpoch - epochErrorRange || epoch > currentEpoch + epochErrorRange) {
     return false;
   }
   if (signalHash !== BigInt(proof.snarkProof.publicSignals.x)) {
     return false;
   }
-  if (expectedRoot !== undefined && expectedRoot !== BigInt(proof.snarkProof.publicSignals.root)) {
+  if (expectedRoot !== BigInt(proof.snarkProof.publicSignals.root)) {
     return false;
   }
   const key = (await artifacts.verificationKey()) as RlnVerificationKey;

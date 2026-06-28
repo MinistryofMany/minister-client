@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
+  MAX_PBKDF2_ITERATIONS,
+  MIN_PBKDF2_ITERATIONS,
   PBKDF2_ITERATIONS,
   WrongPasswordError,
   decryptSeed,
@@ -80,5 +82,24 @@ describe("device-seed vault (PBKDF2-SHA256 + AES-GCM)", () => {
     );
     expect(() => vaultFromJson("not json")).toThrow(/valid JSON/);
     expect(() => vaultFromJson(JSON.stringify({ v: 2 }))).toThrow(/shape|fields/);
+  });
+
+  it("rejects an out-of-bounds iteration count before deriveKey (DoS guard)", async () => {
+    const seed = generateDeviceSeed();
+    const vault = await encryptSeed(seed, PASSWORD);
+
+    // A malicious envelope pinning a huge iteration count must be refused fast,
+    // never fed to PBKDF2 (which would hang the CPU).
+    const huge = { ...vault, iterations: MAX_PBKDF2_ITERATIONS + 1 };
+    await expect(decryptSeed(huge, PASSWORD)).rejects.toThrow(/out of the accepted range/);
+
+    const tooLow = { ...vault, iterations: MIN_PBKDF2_ITERATIONS - 1 };
+    await expect(decryptSeed(tooLow, PASSWORD)).rejects.toThrow(/out of the accepted range/);
+
+    // vaultFromJson also refuses the same envelope at parse time.
+    expect(() => vaultFromJson(JSON.stringify(huge))).toThrow(/out of the accepted range/);
+
+    // The in-bounds default still decrypts correctly (unchanged behavior).
+    expect([...(await decryptSeed(vault, PASSWORD))]).toEqual([...seed]);
   });
 });
