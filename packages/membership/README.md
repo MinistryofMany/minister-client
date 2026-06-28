@@ -58,7 +58,14 @@ records it (via [`@minister/nullifier`](../nullifier)).
    `publicSignals`.
 2. **Banned-exclusion.** `listEligible` omits banned/revoked commitments, so a
    `refresh()` after a ban yields a new root the just-banned member cannot prove
-   against. `verify({ requireCurrentRoot: true })` rejects any older root.
+   against. `requireCurrentRoot` rejects any older root.
+   **SAFE DEFAULT (fail-closed): `requireCurrentRoot` defaults to `true`.** A
+   persisted-store consumer who forgets the flag still rejects a just-banned
+   member's pre-ban snapshot. Pass an **explicit `requireCurrentRoot: false`** only
+   for the deliberately-lenient historical-root mode (e.g. FreedInk comments
+   tolerate stale snapshots). The Semaphore engine additionally guards that the
+   store's returned snapshot root equals the proof root (defense-in-depth), so a
+   wrong-root store row cannot weaken the R1 pin.
 3. **Engine isolation.** The v4 leaf (`SemaphoreLeaf`) and the v3 RLN leaf
    (`RlnLeaf`) are nominally branded, so a v4 leaf cannot flow into the depth-20
    RLN tree (a silent wrong-but-valid root) - it is a compile error. The two

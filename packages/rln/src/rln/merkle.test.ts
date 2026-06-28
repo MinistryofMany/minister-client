@@ -31,7 +31,20 @@ describe("depth-20 RLN merkle root", () => {
     expect(computeRoot(1n, [1n, 2n])).not.toBe(computeRoot(1n, [2n, 1n]));
   });
 
-  it("sanitizeLeaves strips the legacy bigint suffix and stray non-digits", () => {
+  it("sanitizeLeaves accepts plain decimals, the legacy bigint suffix, and bigints unchanged", () => {
+    // Valid decimal leaves (the only thing real providers pass) are unchanged, so
+    // the byte-for-byte RLN tree math for real usage is preserved.
     expect(sanitizeLeaves(["123n", "456", 789n])).toEqual([123n, 456n, 789n]);
+  });
+
+  it("sanitizeLeaves REJECTS a malformed (non-decimal) leaf instead of stripping it (fail-closed)", () => {
+    // FIX C: "1x2x3" must NOT silently become 123 (which would shift the root).
+    expect(() => sanitizeLeaves(["1x2x3"])).toThrow(/malformed leaf/i);
+    expect(() => sanitizeLeaves(["12.34"])).toThrow(/malformed leaf/i);
+    expect(() => sanitizeLeaves(["0xdeadbeef"])).toThrow(/malformed leaf/i);
+    expect(() => sanitizeLeaves(["-5"])).toThrow(/malformed leaf/i);
+    expect(() => sanitizeLeaves([""])).toThrow(/malformed leaf/i);
+    // A valid leaf next to a malformed one still throws (no partial coercion).
+    expect(() => sanitizeLeaves(["123", "1x2"])).toThrow(/malformed leaf/i);
   });
 });

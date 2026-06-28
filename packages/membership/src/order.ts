@@ -29,6 +29,14 @@ import type { EligibleLeaf } from "./provider.js";
  * between the two sides at the same position is a provider bug (the key schema
  * must be consistent across rows); we throw rather than silently coerce, because
  * a silent coercion is exactly the drift this control exists to prevent.
+ *
+ * COLLATION DEPENDENCY: the string branch relies on `localeCompare` producing a
+ * STABLE ordering across both the producer (the env that froze the snapshot) and
+ * the verifier env. FreedInk's keys are ASCII ids/commitments, for which the
+ * default-locale collation is identical everywhere, so this is a latent rather
+ * than active concern; but a future locale-sensitive key (non-ASCII) could in
+ * principle order differently under a different ICU/locale and drift the root.
+ * No behavior change here - this is a tripwire note for whoever adds such a key.
  */
 function compareKey(a: string | number, b: string | number): number {
   if (typeof a === "number" && typeof b === "number") {

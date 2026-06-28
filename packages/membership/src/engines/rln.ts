@@ -144,8 +144,12 @@ export const rlnEngine: ProofEngine<RlnProof> = {
     // R1 pin (control 1): resolve the proof's root to a snapshot PINNED to
     // (context, subTree). The resolved snapshot's root becomes the expectedRoot
     // forced into verifyRlnProof below.
+    // SAFE DEFAULT (fail-closed): requireCurrentRoot defaults to TRUE so a
+    // persisted-store consumer who forgets the flag still rejects a just-banned
+    // member's pre-ban snapshot. An explicit `false` is honored for the
+    // deliberately-lenient historical-root mode.
     const resolved = await ctx.store.getByRoot(ctx.ref, island.snarkProof.publicSignals.root, {
-      requireCurrentRoot: ctx.requireCurrentRoot ?? false,
+      requireCurrentRoot: ctx.requireCurrentRoot ?? true,
     });
     if (!resolved.found) {
       return { ok: false, reason: resolved.stale ? "stale-root" : "unknown-snapshot" };

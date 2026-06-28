@@ -146,8 +146,13 @@ export const semaphoreEngine: ProofEngine<SemaphoreProof> = {
     // (context, subTree). A proof bound to one tree's root cannot pass a
     // different tree/role check, because the store only returns a snapshot whose
     // ref matches AND whose root equals the proof root.
+    // SAFE DEFAULT (fail-closed): requireCurrentRoot defaults to TRUE. A
+    // persisted-store consumer who forgets the flag still rejects a just-banned
+    // member's pre-ban snapshot. An explicit `false` is honored for the
+    // deliberately-lenient historical-root mode (FreedInk comments tolerate stale
+    // snapshots).
     const resolved = await ctx.store.getByRoot(ctx.ref, proof.merkleTreeRoot, {
-      requireCurrentRoot: ctx.requireCurrentRoot ?? false,
+      requireCurrentRoot: ctx.requireCurrentRoot ?? true,
     });
     if (!resolved.found) {
       // The store distinguishes "no such snapshot for this tree" from "known but
@@ -157,6 +162,15 @@ export const semaphoreEngine: ProofEngine<SemaphoreProof> = {
     const snapshot = resolved.snapshot;
     if (snapshot.engine !== "semaphore") {
       return { ok: false, reason: "engine-mismatch" };
+    }
+
+    // FIX B (defense-in-depth): the store contract is that getByRoot returns a
+    // snapshot whose root equals the requested root. Enforce it explicitly so a
+    // future SnapshotStore that returns a wrong-root row cannot weaken the R1 pin.
+    // (The RLN engine already forces snapshot.root as expectedRoot; this makes the
+    // Semaphore engine equally strict.)
+    if (snapshot.root !== proof.merkleTreeRoot) {
+      return { ok: false, reason: "invalid-proof" };
     }
 
     const expectedScope = (await hashToField(ctx.expectedScope)).toString();

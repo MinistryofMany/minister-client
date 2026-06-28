@@ -87,10 +87,16 @@ export interface VerifyContext {
   /** Resolves proof.root -> snapshot (stored or live). */
   store: SnapshotStore;
   /**
-   * When true, require the proof root to equal the CURRENT live root, not just
-   * any known snapshot of this tree (verified: FreedInk requireCurrentRoot kills
-   * the stale-root-after-revoke vector). Always effectively true for the live
-   * store. This is the banned-exclusion enforcement at verify time (control 2).
+   * Require the proof root to equal the CURRENT live root, not just any known
+   * snapshot of this tree (verified: FreedInk requireCurrentRoot kills the
+   * stale-root-after-revoke vector). This is the banned-exclusion enforcement at
+   * verify time (control 2). Always effectively true for the live store.
+   *
+   * SAFE DEFAULT: this is **fail-closed** - when omitted it defaults to `true`, so
+   * a persisted-store consumer who forgets the flag does NOT accept a just-banned
+   * member's pre-ban snapshot. Pass an EXPLICIT `false` only for the deliberately
+   * lenient historical-root mode (e.g. FreedInk comments tolerate stale
+   * snapshots).
    */
   requireCurrentRoot?: boolean;
   /**

@@ -215,4 +215,94 @@ describe.runIf(haveArtifacts)("semaphoreEngine end-to-end (real v4 proof)", () =
     expect(after.ok).toBe(false);
     if (!after.ok) expect(after.reason).toBe("stale-root");
   }, 90_000);
+
+  it("SAFE DEFAULT: a verify WITHOUT requireCurrentRoot rejects a stale pre-ban root (fail-closed)", async () => {
+    // Same banned-exclusion scenario, but verify() does NOT pass the flag. With
+    // the fail-closed default (requireCurrentRoot defaults to true), a forgetful
+    // persisted-store consumer still rejects the just-banned member's pre-ban
+    // snapshot.
+    const me = new Identity();
+    let banned = false;
+    const all = [me, new Identity(), new Identity()];
+    const provider: SemaphoreGroupProvider = {
+      shape: { kind: "dynamic" },
+      engine: "semaphore",
+      async listEligible() {
+        const live = banned ? all.filter((i) => i !== me) : all;
+        return leavesOf(live);
+      },
+    };
+    const store = inMemorySnapshotStore({ liveProvider: provider, engine: semaphoreEngine });
+    const membership = createMembership({ provider, store });
+    const ref: TreeRef = { context: "blog1", subTree: "author" };
+
+    const preBan = await membership.refresh(ref);
+    const proof = await semaphoreEngine.prove({
+      identity: likeOf(me),
+      snapshot: preBan,
+      scope: "post:create",
+      message: "m",
+      artifacts: fileArtifactSource(),
+    });
+
+    // Ban + refresh -> new root excluding the member.
+    banned = true;
+    const postBan = await membership.refresh(ref);
+    expect(postBan.root).not.toBe(preBan.root);
+
+    // No requireCurrentRoot passed: the default is now TRUE, so the stale root is
+    // rejected (fail-closed).
+    const after = await membership.verify({
+      ref,
+      proof,
+      expectedScope: "post:create",
+      expectedMessage: "m",
+    });
+    expect(after.ok).toBe(false);
+    if (!after.ok) expect(after.reason).toBe("stale-root");
+  }, 90_000);
+
+  it("EXPLICIT requireCurrentRoot:false still accepts a stale pre-ban root (lenient historical mode)", async () => {
+    // The deliberately-lenient mode (FreedInk comments) must still be honored: an
+    // explicit `false` accepts a historically-known snapshot even after a ban.
+    const me = new Identity();
+    let banned = false;
+    const all = [me, new Identity(), new Identity()];
+    const provider: SemaphoreGroupProvider = {
+      shape: { kind: "dynamic" },
+      engine: "semaphore",
+      async listEligible() {
+        const live = banned ? all.filter((i) => i !== me) : all;
+        return leavesOf(live);
+      },
+    };
+    const store = inMemorySnapshotStore({ liveProvider: provider, engine: semaphoreEngine });
+    const membership = createMembership({ provider, store });
+    const ref: TreeRef = { context: "blog1", subTree: "author" };
+
+    const preBan = await membership.refresh(ref);
+    const proof = await semaphoreEngine.prove({
+      identity: likeOf(me),
+      snapshot: preBan,
+      scope: "post:create",
+      message: "m",
+      artifacts: fileArtifactSource(),
+    });
+
+    // Ban + refresh -> new current root; the pre-ban snapshot stays known to the
+    // store (it was frozen by refresh()).
+    banned = true;
+    await membership.refresh(ref);
+
+    // Explicit false: the stale pre-ban root is still accepted (lenient mode).
+    const res = await membership.verify({
+      ref,
+      proof,
+      expectedScope: "post:create",
+      expectedMessage: "m",
+      requireCurrentRoot: false,
+    });
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.nullifier).toBe(proof.nullifier);
+  }, 90_000);
 });
