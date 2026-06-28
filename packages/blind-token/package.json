@@ -1,0 +1,38 @@
+{
+  "name": "@minister/blind-token",
+  "version": "0.0.0",
+  "description": "Framework-agnostic Privacy-Pass-style blind-RSA action tokens (suite RSAPBSSA.SHA384.PSS.Randomized, public metadata <infoPrefix>:<actionKey>). One unlinkable token per (group, participant, actionKey). Generalized out of FreedInk's vote-token system so FreedInk (publish votes) and Deforum (ban votes) share one implementation, with the Signet remote signer preserved byte-for-byte. Client prepare/finalize (encapsulating the Chromium-safe finalize), a Signer interface with local + Signet mTLS backends, a record-first/rollback-on-failure Issuer, verify + keygen, and injectable Issuance/Key stores (no ORM).",
+  "type": "module",
+  "license": "MIT OR Apache-2.0",
+  "author": "AtHeartEngineer",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
+    "./client": { "types": "./dist/client/index.d.ts", "import": "./dist/client/index.js" },
+    "./server": { "types": "./dist/server/index.d.ts", "import": "./dist/server/index.js" }
+  },
+  "files": [
+    "dist"
+  ],
+  "sideEffects": false,
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "peerDependencies": {
+    "@cloudflare/blindrsa-ts": "0.4.6"
+  },
+  "devDependencies": {
+    "@cloudflare/blindrsa-ts": "0.4.6",
+    "@types/node": "^20.17.0",
+    "tsup": "^8.3.5",
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.8"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

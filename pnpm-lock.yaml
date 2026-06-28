@@ -31,6 +31,24 @@ importers:
         specifier: ^2.1.8
         version: 2.1.9(@types/node@22.7.5)
 
+  packages/blind-token:
+    devDependencies:
+      '@cloudflare/blindrsa-ts':
+        specifier: 0.4.6
+        version: 0.4.6
+      '@types/node':
+        specifier: ^20.17.0
+        version: 20.19.43
+      tsup:
+        specifier: ^8.3.5
+        version: 8.5.1(postcss@8.5.15)(typescript@5.9.3)
+      typescript:
+        specifier: ^5.6.3
+        version: 5.9.3
+      vitest:
+        specifier: ^2.1.8
+        version: 2.1.9(@types/node@20.19.43)
+
   packages/identity:
     dependencies:
       '@scure/bip39':
@@ -202,6 +220,10 @@ packages:
         optional: true
       nodemailer:
         optional: true
+
+  '@cloudflare/blindrsa-ts@0.4.6':
+    resolution: {integrity: sha512-n+CAo1hM78qkiouXB0Io1pPVBFKIaJqU7FqdCDNtBAB7q2bBpQOifv7Om3Jln/nx+IhjQAjlDjp8la3e9Yg9Bw==}
+    engines: {node: '>=24'}
 
   '@commander-js/extra-typings@12.1.0':
     resolution: {integrity: sha512-wf/lwQvWAA0goIghcb91dQYpkLBcyhOhQNqG/VgWhnKzgt+UOMvra7EX/2fv70arm5RW+PUHoQHHDa6/p77Eqg==}
@@ -1525,6 +1547,9 @@ packages:
     resolution: {integrity: sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw==}
     engines: {node: '>=14'}
 
+  sjcl@1.0.9:
+    resolution: {integrity: sha512-dWM71tkSHxe7zEZj0/COjtJdmErIxp7UMp8a6D4xx8dTTtJLc4lFL+HAX8s6lvASyQQ2iYMHwa7rhhQq7MT5MA==}
+
   snarkjs@0.5.0:
     resolution: {integrity: sha512-KWz8mZ2Y+6wvn6GGkQo6/ZlKwETdAGohd40Lzpwp5TUZCn6N6O4Az1SuX1rw/qREGL6Im+ycb19suCFE8/xaKA==}
     hasBin: true
@@ -1819,6 +1844,10 @@ snapshots:
       oauth4webapi: 3.8.6
       preact: 10.24.3
       preact-render-to-string: 6.5.11(preact@10.24.3)
+
+  '@cloudflare/blindrsa-ts@0.4.6':
+    dependencies:
+      sjcl: 1.0.9
 
   '@commander-js/extra-typings@12.1.0(commander@12.1.0)':
     dependencies:
@@ -3142,6 +3171,8 @@ snapshots:
   signal-exit@3.0.7: {}
 
   signal-exit@4.1.0: {}
+
+  sjcl@1.0.9: {}
 
   snarkjs@0.5.0:
     dependencies:
