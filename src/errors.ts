@@ -1,6 +1,6 @@
 // Thrown when a verifiable-credential badge fails verification — bad
 // signature, wrong issuer, malformed envelope, or a subject-binding
-// mismatch. Mirrors `@minister/vc`'s `VcVerificationError`.
+// mismatch. Mirrors `@ministryofmany/vc`'s `VcVerificationError`.
 // Its message may include VC-derived text; do not reflect it to untrusted output.
 export class VcVerificationError extends Error {
   constructor(message: string) {

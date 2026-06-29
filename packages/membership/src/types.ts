@@ -1,4 +1,4 @@
-// Core domain types for @minister/membership.
+// Core domain types for @ministryofmany/membership.
 //
 // These are the on-the-wire / in-DB shapes the three consumer apps (FreedInk,
 // Discreetly, Deforum) already use, lifted to one vocabulary. Everything is a

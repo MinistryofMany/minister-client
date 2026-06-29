@@ -38,7 +38,7 @@ export interface SignVcArgs {
   typ?: string;
 }
 
-// Sign a Minister-shaped VC JWT, mirroring @minister/vc's issueVc.
+// Sign a Minister-shaped VC JWT, mirroring @ministryofmany/vc's issueVc.
 export async function signVc(args: SignVcArgs): Promise<string> {
   const type = args.type ?? ["VerifiableCredential", "MinisterEmailDomainCredential"];
   const claims = args.claims ?? { domain: "example.com" };

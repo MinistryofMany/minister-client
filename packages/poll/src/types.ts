@@ -1,4 +1,4 @@
-// Core domain types for @minister/poll.
+// Core domain types for @ministryofmany/poll.
 //
 // A Poll is { id, questionType, audienceGate, config, lifecycle }. Each question
 // type fixes its own `config`, `vote`, `tally`, and `resultView` shapes via the
@@ -7,8 +7,8 @@
 // the voter handle, and the cast envelope - the pieces the engine and every
 // question type share.
 
-import type { PolicyNode } from "@minister/policy";
-import type { FieldString } from "@minister/membership";
+import type { PolicyNode } from "@ministryofmany/policy";
+import type { FieldString } from "@ministryofmany/membership";
 
 /**
  * A poll's lifecycle stage. The engine enforces the legal transitions:
@@ -27,10 +27,10 @@ import type { FieldString } from "@minister/membership";
 export type PollLifecycle = "draft" | "open" | "closed" | "resolved";
 
 /**
- * The audience gate: WHO may vote, expressed as a @minister/policy badge
+ * The audience gate: WHO may vote, expressed as a @ministryofmany/policy badge
  * requirement AST (a boolean allOf/anyOf/atLeast/badge-leaf tree). The poll
  * engine does NOT evaluate badges itself - the caller verifies disclosed badge
- * VCs and evaluates this gate with @minister/policy `evaluate(...)` BEFORE
+ * VCs and evaluates this gate with @ministryofmany/policy `evaluate(...)` BEFORE
  * minting a verified voter handle. The gate is carried on the poll so a result
  * view can surface the pool definition (the credibility surface, polling.md).
  *
@@ -48,7 +48,7 @@ export type AudienceGate =
  * the two pools polling.md describes:
  *
  *  - "membership": anonymous / named-set polls. The caller has already verified a
- *    @minister/membership proof (its VerifyResult.nullifier is the field-string
+ *    @ministryofmany/membership proof (its VerifyResult.nullifier is the field-string
  *    membership nullifier). The poll's per-(poll, member) nullifier is derived
  *    from this so a member is unlinkable across polls yet at most one cast counts.
  *
@@ -63,7 +63,7 @@ export type VoterHandle =
   | {
       kind: "membership";
       /**
-       * The membership nullifier from a verified @minister/membership proof
+       * The membership nullifier from a verified @ministryofmany/membership proof
        * (VerifyResult.nullifier), a decimal field-element string. Stable for a
        * given (member, membership-context); unlinkable across contexts.
        */

@@ -8,7 +8,7 @@ import { liveSnapshotStore } from "../store.js";
 import { inMemorySnapshotStore } from "../test-helpers.js";
 import type { ArtifactSource } from "../artifacts.js";
 import type { EligibleLeaf, SemaphoreGroupProvider } from "../provider.js";
-import type { SemaphoreIdentityLike } from "@minister/identity";
+import type { SemaphoreIdentityLike } from "@ministryofmany/identity";
 import type { TreeRef } from "../types.js";
 
 // Real Semaphore v4 proof, end-to-end, plus the two authorization controls that

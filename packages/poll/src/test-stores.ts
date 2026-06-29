@@ -5,7 +5,7 @@
 // the contract a real (SQL) store must meet is the same: a second insert of the
 // same key returns "replay" and writes nothing.
 
-import type { FieldString } from "@minister/membership";
+import type { FieldString } from "@ministryofmany/membership";
 import type { PollStore, VoteStore, CastOutcome } from "./store.js";
 import type { Poll, StoredVote } from "./types.js";
 

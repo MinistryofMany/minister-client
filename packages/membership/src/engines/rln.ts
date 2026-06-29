@@ -1,13 +1,13 @@
-// rlnEngine - RLN (rate-limiting nullifier) over @minister/rln.
+// rlnEngine - RLN (rate-limiting nullifier) over @ministryofmany/rln.
 //
 // toLeaf is the rate commitment poseidon2(ic, userMessageLimit) (NOT the bare
 // commitment); the tree is the fixed depth-20 v3 Group. This is Discreetly's
 // machinery, lifted: generateRlnProof (client) + verifyRlnProof (server),
-// byte-for-byte, with @minister/rln as the v3 + rlnjs quarantine island so no v3
+// byte-for-byte, with @ministryofmany/rln as the v3 + rlnjs quarantine island so no v3
 // type leaks into this package's public surface.
 //
 // CRITICAL (control 1, R1 for RLN): rlnEngine.verify passes the SNAPSHOT ROOT as
-// @minister/rln verifyRlnProof's `expectedRoot` (a required arg after the harden
+// @ministryofmany/rln verifyRlnProof's `expectedRoot` (a required arg after the harden
 // phase). Even though the Groth16 proof binds the root in publicSignals, the
 // package still pins it to the snapshot resolved by (context, subTree), so a
 // proof bound to one tree cannot pass a different tree/role check.
@@ -19,8 +19,8 @@ import {
   generateRlnProof,
   verifyRlnProof,
   staticArtifactSource,
-} from "@minister/rln";
-import type { RlnProof as IslandRlnProof } from "@minister/rln";
+} from "@ministryofmany/rln";
+import type { RlnProof as IslandRlnProof } from "@ministryofmany/rln";
 import type {
   ProofEngine,
   ProveContext,
@@ -43,7 +43,7 @@ function rlnParams(params: EngineParams): { rlnIdentifier: FieldString; userMess
 }
 
 /**
- * Structural guard for the @minister/rln plain proof struct. The proof crosses
+ * Structural guard for the @ministryofmany/rln plain proof struct. The proof crosses
  * the boundary as `unknown`; we verify it has the publicSignals fields the
  * verifier reads BEFORE trusting any of them (the design's "guard before trusting
  * any field"). Returns the typed island proof or null if malformed.
@@ -76,7 +76,7 @@ export const rlnEngine: ProofEngine<RlnProof> = {
     // RLN leaf = rate commitment poseidon2(ic, userMessageLimit). Branded as an
     // RlnLeaf so a bare v4 commitment can never flow into the depth-20 tree
     // (control 3: engine isolation). This is byte-for-byte
-    // @minister/rln getRateCommitmentHash.
+    // @ministryofmany/rln getRateCommitmentHash.
     const rate = getRateCommitmentHash(BigInt(commitment), userMessageLimit);
     return asRlnLeaf(rate.toString());
   },
@@ -89,7 +89,7 @@ export const rlnEngine: ProofEngine<RlnProof> = {
       );
     }
     const { rlnIdentifier } = rlnParams(params);
-    // @minister/rln computeRoot builds the fixed depth-20 v3 Group internally and
+    // @ministryofmany/rln computeRoot builds the fixed depth-20 v3 Group internally and
     // returns a bigint root; never exposes the Group object.
     const root = rlnComputeRoot(BigInt(rlnIdentifier), leaves as unknown as string[]);
     return root.toString();
@@ -107,7 +107,7 @@ export const rlnEngine: ProofEngine<RlnProof> = {
     const x = calculateSignalHash(ctx.message);
 
     // The depth-20 circuit is fixed, so depth is conventionally 20 for the
-    // artifact source. @minister/rln owns the Merkle proof construction.
+    // artifact source. @ministryofmany/rln owns the Merkle proof construction.
     const { wasm, zkey } = await ctx.artifacts.load(20);
     const islandArtifacts = staticArtifactSource({ prover: { wasm, zkey } });
 

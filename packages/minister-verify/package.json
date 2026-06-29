@@ -1,7 +1,7 @@
 {
-  "name": "@minister/minister-verify",
+  "name": "@ministryofmany/minister-verify",
   "version": "0.0.0",
-  "description": "Server-side Minister id_token + badge verifier built on @minister/client, returning sub + verified badges for policy evaluation.",
+  "description": "Server-side Minister id_token + badge verifier built on @ministryofmany/client, returning sub + verified badges for policy evaluation.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
   "author": "AtHeartEngineer",
@@ -21,8 +21,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@minister/client": "workspace:*",
-    "@minister/policy": "workspace:*"
+    "@ministryofmany/client": "workspace:*",
+    "@ministryofmany/policy": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "^20.17.0",

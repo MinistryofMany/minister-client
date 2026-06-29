@@ -22,8 +22,8 @@ import {
   deriveContextNullifierFromField,
   toField,
   FIELD,
-} from "@minister/nullifier";
-import type { FieldString } from "@minister/membership";
+} from "@ministryofmany/nullifier";
+import type { FieldString } from "@ministryofmany/membership";
 import type { VoterHandle } from "./types.js";
 
 /**
@@ -38,7 +38,7 @@ const SUBJECT_TAG = "sub:";
 const MEMBERSHIP_TAG = "mem:";
 
 /**
- * Reduce a poll id to a BN254 field element the same way @minister/nullifier
+ * Reduce a poll id to a BN254 field element the same way @ministryofmany/nullifier
  * reduces an arbitrary subject string: accumulate UTF-8 bytes big-endian mod
  * FIELD. Reusing `toField` keeps the reduction byte-for-byte identical to the
  * rest of the ecosystem rather than inventing a second one.

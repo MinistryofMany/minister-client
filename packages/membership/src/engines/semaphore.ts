@@ -1,4 +1,4 @@
-// semaphoreEngine - vanilla Semaphore v4 over @minister/identity.
+// semaphoreEngine - vanilla Semaphore v4 over @ministryofmany/identity.
 //
 // toLeaf is the identity (the leaf IS the bare identity commitment); the tree is
 // a dynamic LeanIMT (new Group(), depth grows with the member count). This is
@@ -21,12 +21,12 @@ import type { EngineParams } from "../provider.js";
 import { asSemaphoreLeaf } from "../types.js";
 import type { FieldString, IdentityCommitment, Leaf, TreeShape } from "../types.js";
 
-/** Narrow the opaque @minister/identity `native` handle to a v4 Identity. The
+/** Narrow the opaque @ministryofmany/identity `native` handle to a v4 Identity. The
  *  identity package documents `native` as a pure v4 Identity for this engine. */
 function asV4Identity(native: unknown): Identity {
   // Structural check: a v4 Identity exposes a bigint `commitment` getter. We do
   // not deep-validate (the identity is the caller's own per-context identity from
-  // @minister/identity); we only fail loudly if it is plainly not one.
+  // @ministryofmany/identity); we only fail loudly if it is plainly not one.
   const maybe = native as { commitment?: unknown };
   if (maybe == null || typeof maybe !== "object" || typeof maybe.commitment === "undefined") {
     throw new Error("semaphoreEngine: identity.native is not a Semaphore v4 Identity.");

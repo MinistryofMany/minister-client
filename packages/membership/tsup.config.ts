@@ -12,11 +12,11 @@ export default defineConfig({
   sourcemap: true,
   // Workspace + Semaphore deps are installed by the consumer and pinned by the
   // lockfile, so the hashing / proof math is controlled at install time; never
-  // inline them. @minister/rln is the v3 + RLN quarantine island; keeping it
+  // inline them. @ministryofmany/rln is the v3 + RLN quarantine island; keeping it
   // external preserves that boundary.
   external: [
-    "@minister/identity",
-    "@minister/rln",
+    "@ministryofmany/identity",
+    "@ministryofmany/rln",
     "@semaphore-protocol/group",
     "@semaphore-protocol/proof",
     "@semaphore-protocol/identity",

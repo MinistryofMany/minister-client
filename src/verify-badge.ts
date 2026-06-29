@@ -7,7 +7,7 @@ import { VcVerificationError } from "./errors";
 import type { KeyInput, VerifiedBadge } from "./types";
 
 // Verify a Minister-issued verifiable credential against Minister's
-// PUBLIC keys. Unlike `@minister/vc`'s `verifyVc` (which threads a full
+// PUBLIC keys. Unlike `@ministryofmany/vc`'s `verifyVc` (which threads a full
 // Issuer carrying the private key), an RP only ever holds public
 // material — the JWKS Minister serves at /.well-known/jwks.json.
 
@@ -35,9 +35,9 @@ export interface VerifyBadgeOptions {
 
 // Verify a received VC JWT.
 //
-// Beyond `@minister/vc`'s structural checks, this ALSO asserts
+// Beyond `@ministryofmany/vc`'s structural checks, this ALSO asserts
 // `credentialSubject.id === payload.sub` — the holder-binding invariant
-// `@minister/vc` does not currently enforce. Without it, a VC's claims
+// `@ministryofmany/vc` does not currently enforce. Without it, a VC's claims
 // could be presented as bound to a subject other than the one the
 // issuer signed them for.
 export async function verifyMinisterBadge(
@@ -91,7 +91,7 @@ export async function verifyMinisterBadge(
   }
 
   // Holder-binding invariant: the JWT subject must equal the credential
-  // subject the issuer signed. (Additional check beyond @minister/vc.)
+  // subject the issuer signed. (Additional check beyond @ministryofmany/vc.)
   if (subjectId !== payload.sub) {
     throw new VcVerificationError(
       "VC `credentialSubject.id` does not match `sub`",

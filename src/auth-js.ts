@@ -1,4 +1,4 @@
-// @minister/client/auth-js — non-invasive helpers for Auth.js (next-auth).
+// @ministryofmany/client/auth-js — non-invasive helpers for Auth.js (next-auth).
 // We do NOT modify Auth.js; these are values/functions you hand to it via
 // its documented extension points. `@auth/core` is a types-only optional
 // peer used solely for the OIDCConfig return type.

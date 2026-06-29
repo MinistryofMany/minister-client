@@ -1,5 +1,5 @@
 {
-  "name": "@minister/identity",
+  "name": "@ministryofmany/identity",
   "version": "0.0.0",
   "description": "Pure Semaphore v4 identity layer: deterministic device-seed -> per-context Identity derivation (one backed-up seed yields an unlinkable distinct commitment per context), a framework-agnostic PBKDF2-SHA256 + AES-GCM seed vault with a BIP-39 mnemonic backup, the per-device commitment lifecycle + revocation contract, and the structural SemaphoreIdentityLike shape the membership layer consumes. No Semaphore v3 / RLN anywhere in this closure.",
   "type": "module",

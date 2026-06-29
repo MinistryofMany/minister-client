@@ -1,4 +1,4 @@
-// @minister/blind-token/client - browser side.
+// @ministryofmany/blind-token/client - browser side.
 //
 // Two pure-crypto steps, framework-agnostic. The caller owns ALL network I/O (the
 // public-key preflight, the issuance POST, the redemption POST) and the

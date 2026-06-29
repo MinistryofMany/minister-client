@@ -1,8 +1,8 @@
-// @minister/membership - the Semaphore Merkle-group + snapshot + membership-proof
+// @ministryofmany/membership - the Semaphore Merkle-group + snapshot + membership-proof
 // primitive behind pluggable seams.
 //
 // This (root) entry point is SERVER-SIDE: snapshot composition + proof
-// verification. Client-side proof generation lives in @minister/membership/client
+// verification. Client-side proof generation lives in @ministryofmany/membership/client
 // so the prover WASM never lands in a server bundle.
 //
 // See README.md for how FreedInk, Discreetly, and Deforum each map onto

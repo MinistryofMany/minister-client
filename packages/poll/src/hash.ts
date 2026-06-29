@@ -16,7 +16,7 @@ function toHex(buf: ArrayBuffer): string {
 export async function sha256Hex(input: string): Promise<string> {
   if (!globalThis.crypto?.subtle) {
     throw new Error(
-      "@minister/poll: globalThis.crypto.subtle is unavailable (need Node 20+ or a browser)",
+      "@ministryofmany/poll: globalThis.crypto.subtle is unavailable (need Node 20+ or a browser)",
     );
   }
   const digest = await globalThis.crypto.subtle.digest("SHA-256", enc.encode(input));

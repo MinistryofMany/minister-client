@@ -1,4 +1,4 @@
-// @minister/client - Minister relying-party SDK.
+// @ministryofmany/client - Minister relying-party SDK.
 
 // Flow client (for apps hand-rolling OIDC). `createMinisterClient` is the
 // intended surface; the underlying `OidcCore` class stays internal.
@@ -34,5 +34,5 @@ export type {
   KeyInput,
 } from "./types";
 
-// Badge vocabulary (also available standalone at "@minister/client/badges")
+// Badge vocabulary (also available standalone at "@ministryofmany/client/badges")
 export * from "./badges/index";

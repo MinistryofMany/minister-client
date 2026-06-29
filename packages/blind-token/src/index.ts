@@ -1,4 +1,4 @@
-// @minister/blind-token (root entry) - shared, isomorphic surface.
+// @ministryofmany/blind-token (root entry) - shared, isomorphic surface.
 //
 // Privacy-Pass-style blind-RSA action tokens: a participant is issued exactly one
 // unlinkable token per (group, participant, actionKey) and later redeems it

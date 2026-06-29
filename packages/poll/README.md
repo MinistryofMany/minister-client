@@ -1,22 +1,22 @@
-# @minister/poll
+# @ministryofmany/poll
 
 A framework-agnostic polling / decision engine. **One engine, many surfaces**: a
 `Poll` is fixed by three levers - the **question type**, the **audience gate**, and
 the **result view** - so a standalone StrawPoll-style poll, a poll-as-post-type in
 a forum, and a pinned poll in a chat room are all the same primitive. This is the
-NET-NEW primitive in the `@minister/*` scope: no donor app shipped polling as a
+NET-NEW primitive in the `@ministryofmany/*` scope: no donor app shipped polling as a
 reusable module (FreedInk's tally is bespoke to blog-review).
 
 It consumes:
 
-- [`@minister/policy`](../policy) - the audience gate is a badge requirement AST
+- [`@ministryofmany/policy`](../policy) - the audience gate is a badge requirement AST
   (`allOf` / `anyOf` / `atLeast` / badge-leaf). The engine does NOT evaluate
   badges; the caller verifies disclosed VCs and runs `evaluate(...)` BEFORE
   minting a verified voter handle. The gate rides on the poll so a result view can
   surface the pool definition.
-- [`@minister/nullifier`](../nullifier) - `deriveContextNullifier` derives the
+- [`@ministryofmany/nullifier`](../nullifier) - `deriveContextNullifier` derives the
   per-`(poll, member)` nullifier that makes a poll unstuffable.
-- [`@minister/membership`](../membership) - the `FieldString` type and, at the
+- [`@ministryofmany/membership`](../membership) - the `FieldString` type and, at the
   call site, the verified membership proof whose `nullifier` is the voter handle
   for anonymous / named-set polls.
 
@@ -98,7 +98,7 @@ Every cast carries a **verified voter handle** plus a **per-`(poll, member)`
 nullifier**:
 
 - `{ kind: "membership", membershipNullifier }` - anonymous / named-set polls; the
-  caller already verified a `@minister/membership` proof.
+  caller already verified a `@ministryofmany/membership` proof.
 - `{ kind: "subject", subject }` - pseudonymous polls; the caller already
   authenticated a stable per-RP subject (e.g. a Minister pairwise `sub`).
 
@@ -121,7 +121,7 @@ VC verification, badge-policy evaluation, or membership-proof checking. Two thin
 the CALLER MUST do, or the gate is open:
 
 1. **Gate before minting a `VoterHandle` and calling `cast()`.** Before each cast,
-   the caller MUST verify the disclosed badge VCs and run `@minister/policy`
+   the caller MUST verify the disclosed badge VCs and run `@ministryofmany/policy`
    `evaluate()` against the poll's `audienceGate`, AND verify any membership proof,
    and only then mint the verified `VoterHandle` (`{ kind: "subject" }` from an
    authenticated subject, or `{ kind: "membership", membershipNullifier }` from a
@@ -158,7 +158,7 @@ count + reveal-update) are injectable interfaces. **No ORM lives in this package
 ## Usage
 
 ```ts
-import { createPollEngine } from "@minister/poll";
+import { createPollEngine } from "@ministryofmany/poll";
 
 const engine = createPollEngine({ pollStore, voteStore });
 
@@ -179,6 +179,6 @@ const { view } = (await engine.resolve("town-hall-1")) as { ok: true; view: any 
 
 ## Keeping in sync
 
-The badge vocabulary used in an audience gate comes from `@minister/policy`; keep
+The badge vocabulary used in an audience gate comes from `@ministryofmany/policy`; keep
 poll gates expressed against the shared badge slugs (the same drift-check that
 covers the rest of the ecosystem applies).

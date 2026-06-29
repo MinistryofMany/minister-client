@@ -1,12 +1,12 @@
-// @minister/poll - a framework-agnostic polling / decision engine.
+// @ministryofmany/poll - a framework-agnostic polling / decision engine.
 //
 // One engine, many surfaces (polling.md): a Poll = { id, questionType,
 // audienceGate, config, lifecycle } whose behavior is fixed by three levers -
 // the QUESTION TYPE (single-choice, yes-no + quorum/supermajority, ranked IRV,
 // schedule/multi-select, commit-reveal, raffle, verdict), the AUDIENCE GATE (a
-// @minister/policy badge requirement AST), and the RESULT VIEW. Every cast is
+// @ministryofmany/policy badge requirement AST), and the RESULT VIEW. Every cast is
 // UNSTUFFABLE: a verified voter handle plus a per-(poll, member) nullifier from
-// @minister/nullifier, one-vote-guarded by an insert-or-reject VoteStore. All
+// @ministryofmany/nullifier, one-vote-guarded by an insert-or-reject VoteStore. All
 // storage is behind injectable PollStore / VoteStore interfaces - no ORM here.
 
 // Core domain types.

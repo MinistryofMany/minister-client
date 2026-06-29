@@ -1,5 +1,5 @@
 {
-  "name": "@minister/policy",
+  "name": "@ministryofmany/policy",
   "version": "0.0.0",
   "description": "Boolean badge-policy AST, schema, evaluation, and required-scope enumeration for Minister relying parties.",
   "type": "module",

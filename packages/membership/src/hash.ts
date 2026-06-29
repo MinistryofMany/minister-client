@@ -2,7 +2,7 @@
 
 /**
  * BN254 scalar field prime, the field Semaphore signals must live in. Identical
- * to FreedInk's SEMAPHORE_FIELD and @minister/rln's SNARK_FIELD_SIZE; kept here
+ * to FreedInk's SEMAPHORE_FIELD and @ministryofmany/rln's SNARK_FIELD_SIZE; kept here
  * so the hash output is byte-for-byte FreedInk's.
  */
 const SEMAPHORE_FIELD = BigInt(

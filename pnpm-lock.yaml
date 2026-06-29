@@ -73,10 +73,10 @@ importers:
 
   packages/membership:
     dependencies:
-      '@minister/identity':
+      '@ministryofmany/identity':
         specifier: workspace:*
         version: link:../identity
-      '@minister/rln':
+      '@ministryofmany/rln':
         specifier: workspace:*
         version: link:../rln
       '@semaphore-protocol/group':
@@ -104,10 +104,10 @@ importers:
 
   packages/minister-verify:
     dependencies:
-      '@minister/client':
+      '@ministryofmany/client':
         specifier: workspace:*
         version: link:../..
-      '@minister/policy':
+      '@ministryofmany/policy':
         specifier: workspace:*
         version: link:../policy
     devDependencies:
@@ -161,13 +161,13 @@ importers:
 
   packages/poll:
     dependencies:
-      '@minister/membership':
+      '@ministryofmany/membership':
         specifier: workspace:*
         version: link:../membership
-      '@minister/nullifier':
+      '@ministryofmany/nullifier':
         specifier: workspace:*
         version: link:../nullifier
-      '@minister/policy':
+      '@ministryofmany/policy':
         specifier: workspace:*
         version: link:../policy
       zod:

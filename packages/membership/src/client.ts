@@ -1,4 +1,4 @@
-// @minister/membership/client - client-only proof generation.
+// @ministryofmany/membership/client - client-only proof generation.
 //
 // Exported from a separate subpath so the heavy prover deps (the Semaphore proof
 // WASM / the RLN circuit) stay out of server bundles, matching FreedInk's

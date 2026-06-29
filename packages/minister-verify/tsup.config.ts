@@ -7,6 +7,6 @@ export default defineConfig({
   clean: true,
   sourcemap: true,
   // Peers/workspace deps are installed by the consumer; never inline them.
-  external: ["@minister/client", "@minister/policy", "jose"],
+  external: ["@ministryofmany/client", "@ministryofmany/policy", "jose"],
   target: "es2022",
 });

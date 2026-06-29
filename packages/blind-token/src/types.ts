@@ -1,4 +1,4 @@
-// Shared wire + scheme types for @minister/blind-token. Isomorphic: safe to
+// Shared wire + scheme types for @ministryofmany/blind-token. Isomorphic: safe to
 // import from the client or the server entry. These are the generalization of
 // FreedInk's vote-token wire surface (verified against
 // src/lib/client/vote-token.ts + src/lib/server/vote-token.ts).

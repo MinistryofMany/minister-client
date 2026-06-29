@@ -1,4 +1,4 @@
-# @minister/client
+# @ministryofmany/client
 
 OIDC relying-party SDK for **Minister** — an OpenID Connect identity provider
 that lets users authenticate _and_ disclose W3C verifiable-credential "badges"
@@ -11,7 +11,7 @@ Use this in your app to:
 - Extract and **signature-verify** the disclosed badges against Minister's
   public keys, with holder-binding enforced.
 
-Three ways to integrate: run the full flow yourself (`createMinisterClient`), verify tokens/badges on a backend (`createMinisterVerifier`), or plug into Auth.js (`@minister/client/auth-js`).
+Three ways to integrate: run the full flow yourself (`createMinisterClient`), verify tokens/badges on a backend (`createMinisterVerifier`), or plug into Auth.js (`@ministryofmany/client/auth-js`).
 
 ESM-only. Runs on Node 20+, Deno, and edge runtimes (Vercel Edge, Cloudflare
 Workers) — it uses the Web Crypto API and `fetch`, not `node:crypto`.
@@ -19,7 +19,7 @@ Workers) — it uses the Web Crypto API and `fetch`, not `node:crypto`.
 ## Install
 
 ```sh
-pnpm add @minister/client
+pnpm add @ministryofmany/client
 ```
 
 `jose` and `zod` are runtime dependencies and are installed automatically.
@@ -29,7 +29,7 @@ pnpm add @minister/client
 Create one client and reuse it. `issuer` is Minister's origin.
 
 ```ts
-import { createMinisterClient } from "@minister/client";
+import { createMinisterClient } from "@ministryofmany/client";
 
 export const minister = createMinisterClient({
   issuer: "https://ministry.id",
@@ -42,7 +42,7 @@ export const minister = createMinisterClient({
 ### 1. Start — build the authorization URL and persist flow state
 
 ```ts
-import type { OidcFlowState } from "@minister/client";
+import type { OidcFlowState } from "@ministryofmany/client";
 
 export async function startLogin() {
   const { verifier, challenge } = await minister.generatePkce();
@@ -134,7 +134,7 @@ Badges can also reach you outside the OIDC flow (e.g. a Minister share link).
 Verify any Minister VC JWT against Minister's public keys:
 
 ```ts
-import { VcVerificationError } from "@minister/client";
+import { VcVerificationError } from "@ministryofmany/client";
 
 try {
   const badge = await minister.verifyMinisterBadge(vcJwt);
@@ -154,7 +154,7 @@ try {
 Optionally validate the claim shape against the known badge vocabulary:
 
 ```ts
-import { getBadgeClaimSchema } from "@minister/client";
+import { getBadgeClaimSchema } from "@ministryofmany/client";
 
 const schema = getBadgeClaimSchema("email-domain");
 const parsed = schema?.safeParse(badge.claims);
@@ -167,7 +167,7 @@ just need to verify a Minister `id_token` and its badges, use the verifier —
 no flow state, no redirect handling:
 
 ```ts
-import { createMinisterVerifier } from "@minister/client";
+import { createMinisterVerifier } from "@ministryofmany/client";
 
 const minister = createMinisterVerifier({
   issuer: "https://ministry.id",
@@ -189,14 +189,14 @@ fetch. Pass `jwks` to inject a key in tests.
 
 ## With Auth.js (next-auth)
 
-`@minister/client/auth-js` gives you a provider config and a badge helper you
+`@ministryofmany/client/auth-js` gives you a provider config and a badge helper you
 hand to Auth.js through its documented extension points. We do **not** modify,
 fork, or pin Auth.js — `@auth/core` is a types-only optional peer.
 
 ```ts
 import NextAuth from "next-auth";
-import { ministerProvider, ministerBadgesFromProfile } from "@minister/client/auth-js";
-import { badgeScopes } from "@minister/client/badges";
+import { ministerProvider, ministerBadgesFromProfile } from "@ministryofmany/client/auth-js";
+import { badgeScopes } from "@ministryofmany/client/badges";
 
 export const { handlers, auth } = NextAuth({
   providers: [
@@ -227,9 +227,9 @@ your own callback.
 
 ### Subpath imports
 
-- `@minister/client` — the main entry: flow client, verifier, errors, types, and the badge vocabulary.
-- `@minister/client/badges` — the badge vocabulary alone (slugs, scopes, Zod claim schemas, `badgeScope`/`badgeScopes`/`badgeTypeOf`). Dependency-light; no jose pulled in. Useful for building scope lists or parsing claims in a UI.
-- `@minister/client/auth-js` — the Auth.js helpers only (`ministerProvider`, `ministerBadgesFromProfile`).
+- `@ministryofmany/client` — the main entry: flow client, verifier, errors, types, and the badge vocabulary.
+- `@ministryofmany/client/badges` — the badge vocabulary alone (slugs, scopes, Zod claim schemas, `badgeScope`/`badgeScopes`/`badgeTypeOf`). Dependency-light; no jose pulled in. Useful for building scope lists or parsing claims in a UI.
+- `@ministryofmany/client/auth-js` — the Auth.js helpers only (`ministerProvider`, `ministerBadgesFromProfile`).
 
 ## What "verified" means here
 

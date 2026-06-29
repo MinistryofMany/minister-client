@@ -1,6 +1,6 @@
 // did:web identifier for a domain. Per the W3C did:web spec the DID
 // document is served at https://<domain>/.well-known/did.json. Mirrors
-// `@minister/vc`'s `buildDid` so the VC `iss` this SDK expects matches
+// `@ministryofmany/vc`'s `buildDid` so the VC `iss` this SDK expects matches
 // exactly what Minister stamps when issuing.
 export function buildDid(domain: string): string {
   return `did:web:${domain}`;

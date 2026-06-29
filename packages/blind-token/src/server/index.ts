@@ -1,4 +1,4 @@
-// @minister/blind-token/server - Node side.
+// @ministryofmany/blind-token/server - Node side.
 //
 // The Signer interface + LocalSigner / RemoteSigner backends, createSigner
 // selection, the record-first/rollback-on-failure Issuer, verifyToken,

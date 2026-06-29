@@ -6,17 +6,17 @@ import {
   deriveSecret,
   deriveCommitment,
   randomBigInt,
-} from "@minister/rln";
+} from "@ministryofmany/rln";
 import { rlnEngine } from "./rln.js";
 import { createMembership } from "../membership.js";
 import { liveSnapshotStore } from "../store.js";
 import type { ArtifactSource } from "../artifacts.js";
 import type { EligibleLeaf, RlnGroupProvider } from "../provider.js";
-import type { SemaphoreIdentityLike } from "@minister/identity";
+import type { SemaphoreIdentityLike } from "@ministryofmany/identity";
 import type { TreeRef } from "../types.js";
 
 // Real RLN (Semaphore v3) proof, end-to-end. The RLN engine's verify MUST pass
-// the SNAPSHOT ROOT as @minister/rln verifyRlnProof's expectedRoot (control 1,
+// the SNAPSHOT ROOT as @ministryofmany/rln verifyRlnProof's expectedRoot (control 1,
 // R1 for RLN): a proof's root is pinned to the resolved snapshot even though RLN
 // also binds the root in publicSignals.
 //
@@ -47,7 +47,7 @@ function verificationKey(): Record<string, unknown> {
 // The RLN identity uses Semaphore v3-style secrets: the circuit derives the
 // commitment as poseidon1(identitySecret), so the leaf MUST be the rate
 // commitment of THAT commitment, not a v4 commitment. We mint a v3-style RLN
-// identity from @minister/rln's own derivation (random trapdoor/nullifier ->
+// identity from @ministryofmany/rln's own derivation (random trapdoor/nullifier ->
 // secret -> commitment), exactly the contract the depth-20 circuit expects.
 interface RlnId {
   commitment: bigint;

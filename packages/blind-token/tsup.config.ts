@@ -2,7 +2,7 @@ import { defineConfig } from "tsup";
 
 export default defineConfig({
   // Three entry points mirroring the FreedInk client/server split + the
-  // @minister/client root-plus-subpaths convention:
+  // @ministryofmany/client root-plus-subpaths convention:
   //   - root: shared isomorphic wire helpers (buildInfo, codecs, SUITE_NAME, types)
   //   - client: browser prepare/finalize (lazy-loads @cloudflare/blindrsa-ts)
   //   - server: Signer backends, Issuer, verify, keygen, store interfaces

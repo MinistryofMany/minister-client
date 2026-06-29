@@ -1,7 +1,7 @@
 {
-  "name": "@minister/membership",
+  "name": "@ministryofmany/membership",
   "version": "0.0.0",
-  "description": "The Semaphore Merkle-group + snapshot + membership-proof primitive behind pluggable seams: a MerkleGroupProvider (per-app eligible leaf set), an optional SnapshotStore (with a package-shipped live no-op store), and a ProofEngine with two shipped engines - semaphoreEngine over @minister/identity (vanilla Semaphore v4, dynamic LeanIMT) and rlnEngine over @minister/rln (RLN, fixed depth-20). Pins every lookup to (context, subTree, root) for authorization, excludes banned/revoked commitments from refreshed roots, and brands the v4 leaf vs the v3 RLN leaf so they cannot be confused. Consumed by FreedInk, Discreetly, and Deforum.",
+  "description": "The Semaphore Merkle-group + snapshot + membership-proof primitive behind pluggable seams: a MerkleGroupProvider (per-app eligible leaf set), an optional SnapshotStore (with a package-shipped live no-op store), and a ProofEngine with two shipped engines - semaphoreEngine over @ministryofmany/identity (vanilla Semaphore v4, dynamic LeanIMT) and rlnEngine over @ministryofmany/rln (RLN, fixed depth-20). Pins every lookup to (context, subTree, root) for authorization, excludes banned/revoked commitments from refreshed roots, and brands the v4 leaf vs the v3 RLN leaf so they cannot be confused. Consumed by FreedInk, Discreetly, and Deforum.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
   "author": "AtHeartEngineer",
@@ -22,8 +22,8 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@minister/identity": "workspace:*",
-    "@minister/rln": "workspace:*",
+    "@ministryofmany/identity": "workspace:*",
+    "@ministryofmany/rln": "workspace:*",
     "@semaphore-protocol/group": "^4.0.3",
     "@semaphore-protocol/proof": "^4.0.3"
   },

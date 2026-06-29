@@ -1,5 +1,5 @@
 {
-  "name": "@minister/nullifier",
+  "name": "@ministryofmany/nullifier",
   "version": "0.0.0",
   "description": "Context-agnostic Poseidon nullifier derivation (poseidon2(toField(sub), contextId)) plus the server-side replay/uniqueness store contract.",
   "type": "module",

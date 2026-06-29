@@ -2,8 +2,8 @@ import {
   createMinisterVerifier,
   type KeyInput,
   type VerifiedBadge as VerifiedBadgeSdk,
-} from "@minister/client";
-import type { VerifiedBadge } from "@minister/policy";
+} from "@ministryofmany/client";
+import type { VerifiedBadge } from "@ministryofmany/policy";
 
 export interface VerifiedIdentity {
   sub: string;
@@ -64,7 +64,7 @@ function iatFromRawVc(rawVcJwt: string): number {
 
 /**
  * Factory so callers can inject a local JWKS + mock issuer config. Wraps the
- * `@minister/client` verifier and reproduces the `VerifiedIdentity` contract
+ * `@ministryofmany/client` verifier and reproduces the `VerifiedIdentity` contract
  * relying-party services consume.
  *
  * Bad-badge handling: the SDK never throws on an individual malformed,
@@ -75,7 +75,7 @@ function iatFromRawVc(rawVcJwt: string): number {
  * signature / issuer / audience / expiry.
  */
 export function makeVerifier(deps: VerifierDeps) {
-  // Fail-closed audience. `@minister/client` only enforces the id_token `aud`
+  // Fail-closed audience. `@ministryofmany/client` only enforces the id_token `aud`
   // when its `clientId` is truthy - it builds the underlying `jose` verify
   // options as `...clientId ? { audience: clientId } : {}`, so an
   // empty/undefined audience would SILENTLY SKIP the `aud` check and accept a

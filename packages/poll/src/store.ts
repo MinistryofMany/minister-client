@@ -3,7 +3,7 @@
 // stores must satisfy, and the security-critical one - the one-vote guard - is
 // expressed as an insert-or-reject contract the store MUST implement atomically.
 
-import type { FieldString } from "@minister/membership";
+import type { FieldString } from "@ministryofmany/membership";
 import type { Poll, StoredVote } from "./types.js";
 
 /**
@@ -38,7 +38,7 @@ export type CastOutcome = { status: "fresh" } | { status: "replay" };
  *
  * Implement it as an INSERT guarded by a UNIQUE(pollId, nullifier) index,
  * catching the unique violation and reporting "replay" - exactly the FreedInk
- * insert-or-reject model and the @minister/nullifier NullifierStore contract.
+ * insert-or-reject model and the @ministryofmany/nullifier NullifierStore contract.
  * A non-atomic check-then-insert is a stuffing vulnerability (two concurrent
  * casts could both pass the check); the contract REQUIRES atomicity.
  */

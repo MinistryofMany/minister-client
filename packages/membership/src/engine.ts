@@ -19,7 +19,7 @@ import type {
   TreeRef,
   TreeShape,
 } from "./types.js";
-import type { SemaphoreIdentityLike } from "@minister/identity";
+import type { SemaphoreIdentityLike } from "@ministryofmany/identity";
 
 /**
  * Vanilla Semaphore proof payload - EXACTLY FreedInk's ProofPayload (verified
@@ -38,13 +38,13 @@ export interface SemaphoreProof {
 }
 
 /**
- * RLN proof payload - wraps the @minister/rln plain proof struct. The package
+ * RLN proof payload - wraps the @ministryofmany/rln plain proof struct. The package
  * does not re-type rlnjs internals; the RlnEngine guards `full` before trusting
  * any field. `full` is the bigint/string-only `RlnProof` the island emits.
  */
 export interface RlnProof {
   kind: "rln";
-  /** The @minister/rln RlnProof, structurally. Typed as unknown at the boundary;
+  /** The @ministryofmany/rln RlnProof, structurally. Typed as unknown at the boundary;
    *  the RlnEngine narrows + guards it. */
   full: unknown;
 }
@@ -53,7 +53,7 @@ export type MembershipProof = SemaphoreProof | RlnProof;
 
 /** What the client must hold to generate a proof. */
 export interface ProveContext {
-  /** The member's per-context Semaphore identity (from @minister/identity).
+  /** The member's per-context Semaphore identity (from @ministryofmany/identity).
    *  Opaque here; the engine narrows it to the proof system's identity type. */
   identity: SemaphoreIdentityLike;
   /** The snapshot the proof binds to (leaves + root + shape). */
@@ -112,7 +112,7 @@ export interface VerifyContext {
     currentEpoch: bigint;
     epochErrorRange?: bigint;
     rlnIdentifier: FieldString;
-    /** The parsed RLN Groth16 verification key (the @minister/rln
+    /** The parsed RLN Groth16 verification key (the @ministryofmany/rln
      *  RlnVerificationKey JSON). Required to run the SNARK verification. */
     verificationKey: Record<string, unknown>;
   };
@@ -167,7 +167,7 @@ export interface ProofEngine<P extends MembershipProof = MembershipProof> {
    * Build the in-memory group + root from an ordered leaf set, honoring the
    * TreeShape.
    *  - semaphore: new Group() (dynamic LeanIMT).
-   *  - rln:       depth-20 group via @minister/rln computeRoot.
+   *  - rln:       depth-20 group via @ministryofmany/rln computeRoot.
    */
   computeRoot(leaves: readonly Leaf[], shape: TreeShape, params: EngineParams): Promise<FieldString>;
 

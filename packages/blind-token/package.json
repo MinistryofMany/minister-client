@@ -1,5 +1,5 @@
 {
-  "name": "@minister/blind-token",
+  "name": "@ministryofmany/blind-token",
   "version": "0.0.0",
   "description": "Framework-agnostic Privacy-Pass-style blind-RSA action tokens (suite RSAPBSSA.SHA384.PSS.Randomized, public metadata <infoPrefix>:<actionKey>). One unlinkable token per (group, participant, actionKey). Generalized out of FreedInk's vote-token system so FreedInk (publish votes) and Deforum (ban votes) share one implementation, with the Signet remote signer preserved byte-for-byte. Client prepare/finalize (encapsulating the Chromium-safe finalize), a Signer interface with local + Signet mTLS backends, a record-first/rollback-on-failure Issuer, verify + keygen, and injectable Issuance/Key stores (no ORM).",
   "type": "module",

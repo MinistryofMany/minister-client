@@ -28,7 +28,7 @@ export type IdentityCommitment = FieldString;
 export type ContextId = string;
 
 /**
- * The structural shape `@minister/membership` consumes from a Semaphore identity
+ * The structural shape `@ministryofmany/membership` consumes from a Semaphore identity
  * (the `SemaphoreIdentityLike` contract from membership-interface.md section 6).
  *
  * The contract deliberately does NOT name a concrete Semaphore major: it exposes

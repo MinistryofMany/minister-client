@@ -1,4 +1,4 @@
-# @minister/membership
+# @ministryofmany/membership
 
 The Semaphore Merkle-group + snapshot + membership-proof primitive, behind
 pluggable seams. One set of primitives - per-context Merkle group, snapshot,
@@ -8,15 +8,15 @@ WITHOUT changing their on-the-wire proof shape or their database.
 
 It consumes:
 
-- [`@minister/identity`](../identity) - pure Semaphore **v4**: per-context
+- [`@ministryofmany/identity`](../identity) - pure Semaphore **v4**: per-context
   identity derivation + the structural `SemaphoreIdentityLike` contract. The
   `semaphoreEngine` runs over it.
-- [`@minister/rln`](../rln) - the Semaphore **v3 + RLN** quarantine island
+- [`@ministryofmany/rln`](../rln) - the Semaphore **v3 + RLN** quarantine island
   (bigint-only surface). The `rlnEngine` runs over it; no v3 type leaks into this
   package's public surface.
 
 Replay / uniqueness is **not** here: `verify()` returns the nullifier and the app
-records it (via [`@minister/nullifier`](../nullifier)).
+records it (via [`@ministryofmany/nullifier`](../nullifier)).
 
 ## Layers
 
@@ -53,7 +53,7 @@ records it (via [`@minister/nullifier`](../nullifier)).
 1. **R1 authorization pin.** Every lookup is pinned to `(context, subTree, root)`,
    so a proof bound to one tree's root cannot pass a different tree/role check.
    This holds for the RLN engine too: `rlnEngine.verify` resolves the snapshot by
-   `(context, subTree)` and forces that snapshot's root as `@minister/rln`
+   `(context, subTree)` and forces that snapshot's root as `@ministryofmany/rln`
    `verifyRlnProof`'s `expectedRoot`, even though RLN also binds the root in
    `publicSignals`.
 2. **Banned-exclusion.** `listEligible` omits banned/revoked commitments, so a
@@ -148,7 +148,7 @@ const membership = createMembership({ provider, store: deforumSnapshotStore });
 // Anon post: client generateMembershipProof(per-sub-forum identity, frozen
 // banned-excluded snapshot, scope = per-epoch/per-action, message = content hash);
 // server verify({ requireCurrentRoot: true }) and record the nullifier under the
-// per-epoch cap (@minister/nullifier).
+// per-epoch cap (@ministryofmany/nullifier).
 //
 // Optional RLN escalation (D4): a high-abuse anon-action tree flips to
 // engine:'rln' + shape:{kind:'fixed',depth:20} + RLN engineParams, reusing
@@ -157,17 +157,17 @@ const membership = createMembership({ provider, store: deforumSnapshotStore });
 
 ## Entry points
 
-- `@minister/membership` (server): `createMembership`, `liveSnapshotStore`, the
+- `@ministryofmany/membership` (server): `createMembership`, `liveSnapshotStore`, the
   engines, the seams + types.
-- `@minister/membership/client`: `generateMembershipProof` + the artifact
+- `@ministryofmany/membership/client`: `generateMembershipProof` + the artifact
   helpers, kept separate so the prover WASM never lands in a server bundle.
 
 ## Build / test
 
 ```sh
-pnpm --filter @minister/membership run build       # tsup -> dist (.js + .d.ts), two entries
-pnpm --filter @minister/membership run typecheck   # tsc --noEmit
-pnpm --filter @minister/membership run test         # vitest
+pnpm --filter @ministryofmany/membership run build       # tsup -> dist (.js + .d.ts), two entries
+pnpm --filter @ministryofmany/membership run typecheck   # tsc --noEmit
+pnpm --filter @ministryofmany/membership run test         # vitest
 ```
 
 The two end-to-end suites generate REAL proofs and inject the circuit artifacts

@@ -91,7 +91,7 @@ export function createPollEngine(cfg: PollEngineConfig): PollEngine {
 
   function lookup(poll: Poll): AnyQuestionType {
     const qt = registry[poll.questionType];
-    if (!qt) throw new Error(`@minister/poll: unknown question type "${poll.questionType}"`);
+    if (!qt) throw new Error(`@ministryofmany/poll: unknown question type "${poll.questionType}"`);
     return qt;
   }
 

@@ -35,10 +35,10 @@ export function defineBadgeType(input: {
   return { ...input, scope: `badge:${input.slug}` };
 }
 
-// NOTE: `credentialType` values must match Minister's @minister/shared
+// NOTE: `credentialType` values must match Minister's @ministryofmany/shared
 // `ministerCredentialType(slug)` output exactly. If a future Minister slug
 // uses irregular casing, fix the literal here (this file is the one place
-// to do it). The planned drift-check will assert these against @minister/shared.
+// to do it). The planned drift-check will assert these against @ministryofmany/shared.
 const ENTRIES: BadgeTypeDef[] = [
   defineBadgeType({ slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims }),
   defineBadgeType({ slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims }),
