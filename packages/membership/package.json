@@ -1,6 +1,6 @@
 {
   "name": "@ministryofmany/membership",
-  "version": "0.0.0",
+  "version": "0.1.0",
   "description": "The Semaphore Merkle-group + snapshot + membership-proof primitive behind pluggable seams: a MerkleGroupProvider (per-app eligible leaf set), an optional SnapshotStore (with a package-shipped live no-op store), and a ProofEngine with two shipped engines - semaphoreEngine over @ministryofmany/identity (vanilla Semaphore v4, dynamic LeanIMT) and rlnEngine over @ministryofmany/rln (RLN, fixed depth-20). Pins every lookup to (context, subTree, root) for authorization, excludes banned/revoked commitments from refreshed roots, and brands the v4 leaf vs the v3 RLN leaf so they cannot be confused. Consumed by FreedInk, Discreetly, and Deforum.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
@@ -9,8 +9,14 @@
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
-    ".": { "types": "./dist/index.d.ts", "import": "./dist/index.js" },
-    "./client": { "types": "./dist/client.d.ts", "import": "./dist/client.js" }
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "import": "./dist/client.js"
+    }
   },
   "files": [
     "dist"
