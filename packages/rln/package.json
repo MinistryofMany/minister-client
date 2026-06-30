@@ -1,7 +1,7 @@
 {
   "name": "@ministryofmany/rln",
-  "version": "0.1.0",
-  "description": "Quarantine island for Semaphore v3 + RLN (rate-limiting nullifier). Privately bundles Semaphore v3 + rlnjs 3.2.0 + the depth-20 circuit and exposes a bigint-only surface: rate commitment, RLN nullifier, Shamir recovery, signal hash, the depth-20 Merkle root, and the v3 identity-secret derivation/deserializer. Never exports a Semaphore Group or Identity object.",
+  "version": "0.1.1",
+  "description": "Self-contained Semaphore v3 + RLN (rate-limiting nullifier) package. Privately bundles Semaphore v3 + rlnjs 3.2.0 + the depth-20 circuit and exposes a bigint-only surface: rate commitment, RLN nullifier, Shamir recovery, signal hash, the depth-20 Merkle root, and the v3 identity-secret derivation/deserializer. Never exports a Semaphore Group or Identity object.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
   "author": "AtHeartEngineer",
