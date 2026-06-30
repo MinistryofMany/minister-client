@@ -1,8 +1,7 @@
 # @ministryofmany/membership
 
-The Semaphore Merkle-group + snapshot + membership-proof primitive, behind
-pluggable seams. One set of primitives - per-context Merkle group, snapshot,
-client proof generation, server verify - that three structurally different apps
+Semaphore group-membership proofs - per-context Merkle group, snapshots,
+client-side proof generation, server-side verify - that three structurally different apps
 (FreedInk, Discreetly, Deforum) back with their own storage and tree model
 WITHOUT changing their on-the-wire proof shape or their database.
 

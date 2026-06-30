@@ -1,5 +1,5 @@
-// @ministryofmany/membership - the Semaphore Merkle-group + snapshot + membership-proof
-// primitive behind pluggable seams.
+// @ministryofmany/membership - Semaphore group-membership proofs (Merkle group +
+// snapshots + verify), with storage and the proof engine supplied by the consuming app.
 //
 // This (root) entry point is SERVER-SIDE: snapshot composition + proof
 // verification. Client-side proof generation lives in @ministryofmany/membership/client
