@@ -44,33 +44,33 @@ export interface VerifierDeps {
 }
 
 /**
- * Recover the VC `iat` (seconds) from an already-verified VC JWT to fill the
- * policy engine's `issuedAt` slot. No signature work happens here: the SDK
- * already verified `raw`, so we only base64url-decode the payload segment and
- * read `iat`. Returns 0 when the claim is absent or the payload is
- * unparseable.
+ * Fill the policy engine's `issuedAt` slot from the badge's COARSE issuance
+ * bucket: Minister discloses `credentialSubject.issuanceMonth` ("YYYY-MM",
+ * the UTC calendar month of the badge's TRUE issuance), which the SDK
+ * surfaces — already strictly format-checked — as `VerifiedBadge.issuanceMonth`.
  *
- * KNOWN REGRESSION (documented, accepted): post-MIN-1 this is NOT the badge's
- * issuance time. Minister re-mints every disclosed badge at disclosure time
- * (pairwise sub/jti, and `iat`/`nbf`/`exp` re-stamped to the disclosure
- * instant), so the recovered `iat` is "seconds ago" for every live token.
- * Any `maxAgeDays` policy leaf evaluated against this value passes
- * unconditionally — the RP-side freshness check is vacuous. The composed
- * system is still safe because Minister enforces `maxAgeDays` consent-side
- * against the badge's true database issuance time before disclosing, but do
- * not rely on this field as defense-in-depth. A verifiable, coarse
- * issuance-age claim for RPs is a tracked design follow-up.
+ * The mapping is the bucket START (first UTC second of the month), so the
+ * computed age is always ≥ the true age: a stale badge can NEVER pass a
+ * `maxAgeDays` leaf via bucketing (fail-closed), at the price of sub-month
+ * precision (a badge issued late in a month reads as old as its month start;
+ * `maxAgeDays` gates are month-granular by contract — Minister evaluates the
+ * SAME coarse clock consent-side, so both ends agree).
+ *
+ * Never derive age from the VC `iat`: MIN-1 re-stamps it (and `nbf`/`exp`)
+ * to the DISCLOSURE instant precisely because fine-grained issuance
+ * timestamps were a cross-RP correlator — an iat-derived `issuedAt` reads
+ * "seconds old" for every live token and admits any stale badge.
+ *
+ * Returns 0 when the claim is absent (a legacy, pre-claim Minister) or —
+ * defensively — unparseable: age ≈ `now`, so every `maxAgeDays` leaf fails
+ * (no freshness evidence ⇒ no freshness pass) while age-less leaves are
+ * unaffected.
  */
-function iatFromRawVc(rawVcJwt: string): number {
-  const seg = rawVcJwt.split(".")[1];
-  if (!seg) return 0;
-  try {
-    const json = Buffer.from(seg, "base64url").toString("utf8");
-    const iat = (JSON.parse(json) as { iat?: unknown }).iat;
-    return typeof iat === "number" ? iat : 0;
-  } catch {
-    return 0;
-  }
+function issuedAtFromIssuanceMonth(issuanceMonth: string | undefined): number {
+  if (issuanceMonth === undefined) return 0;
+  const match = /^(\d{4})-(0[1-9]|1[0-2])$/.exec(issuanceMonth);
+  if (!match) return 0;
+  return Date.UTC(Number(match[1]), Number(match[2]) - 1, 1) / 1000;
 }
 
 /**
@@ -126,10 +126,9 @@ export function makeVerifier(deps: VerifierDeps) {
       badges: badges.map((b: VerifiedBadgeSdk) => ({
         type: b.type,
         attributes: b.claims as VerifiedBadge["attributes"],
-        // Disclosure time, not issuance time — see iatFromRawVc: RP-side
-        // maxAgeDays evaluated on this is vacuous (Minister enforces
-        // freshness consent-side).
-        issuedAt: iatFromRawVc(b.raw),
+        // The issuance-month bucket START (coarse, fail-closed) — never the
+        // disclosure-time iat. See issuedAtFromIssuanceMonth.
+        issuedAt: issuedAtFromIssuanceMonth(b.issuanceMonth),
       })),
     };
   };

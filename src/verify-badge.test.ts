@@ -119,4 +119,55 @@ describe("verifyMinisterBadge", () => {
       verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
     ).rejects.toBeInstanceOf(VcVerificationError);
   });
+
+  // ---------------------------------------------------------------------------
+  // Reserved coarse-issuance metadata: `credentialSubject.issuanceMonth`
+  // ("YYYY-MM", UTC month of the badge's true issuance). It is issuer
+  // metadata, NOT a per-type claim: surfaced as its own field, stripped
+  // before per-type schema validation, and strictly format-checked.
+  // ---------------------------------------------------------------------------
+
+  it("surfaces issuanceMonth as metadata and STRIPS it from the claims", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "a.com", issuanceMonth: "2026-03" } });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.issuanceMonth).toBe("2026-03");
+    // Not a claim: per-type claims stay exactly the badge facts.
+    expect(badge.claims).toEqual({ domain: "a.com" });
+  });
+
+  it("keeps a STRICT per-type schema (tlsn-attestation) passing despite the reserved key", async () => {
+    // TlsnAttestationClaims is .strict(): if issuanceMonth leaked into the
+    // schema parse, every disclosed tlsn badge would be rejected. The strip
+    // must happen before validation, like `id`.
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({
+      credentialType: "MinisterTlsnAttestationCredential",
+      claims: { domain: "id.me", claim: "age>=21", issuanceMonth: "2026-03" },
+    });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.type).toBe("tlsn-attestation");
+    expect(badge.claims).toEqual({ domain: "id.me", claim: "age>=21" });
+    expect(badge.issuanceMonth).toBe("2026-03");
+  });
+
+  it("tolerates an absent issuanceMonth (legacy Minister): verifies, field undefined", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "a.com" } });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.issuanceMonth).toBeUndefined();
+  });
+
+  it("rejects a present-but-malformed issuanceMonth (nothing finer or weirder than YYYY-MM)", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    // Day precision, bad month, non-string, junk — all must fail closed:
+    // a malformed bucket means issuer drift or tampering upstream of the
+    // signature; never guess.
+    for (const bad of ["2026-03-15", "2026-13", "2026-00", "March 2026", 202603, "", null]) {
+      const jwt = await signVc({ claims: { domain: "a.com", issuanceMonth: bad } });
+      await expect(
+        verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
+      ).rejects.toBeInstanceOf(VcVerificationError);
+    }
+  });
 });

@@ -129,7 +129,20 @@ async function verifyMinisterBadge(vcJwt, options) {
       `Unknown Minister badge type: ${vc.type.join(",")}`
     );
   }
-  const { id: _id, ...rawClaims } = credentialSubject;
+  const {
+    id: _id,
+    issuanceMonth: rawIssuanceMonth,
+    ...rawClaims
+  } = credentialSubject;
+  let issuanceMonth;
+  if (rawIssuanceMonth !== void 0) {
+    if (typeof rawIssuanceMonth !== "string" || !/^\d{4}-(0[1-9]|1[0-2])$/.test(rawIssuanceMonth)) {
+      throw new VcVerificationError(
+        "VC `credentialSubject.issuanceMonth` is not a YYYY-MM UTC month"
+      );
+    }
+    issuanceMonth = rawIssuanceMonth;
+  }
   const schema = getBadgeClaimSchema(slug);
   let claims;
   try {
@@ -139,7 +152,13 @@ async function verifyMinisterBadge(vcJwt, options) {
       `Badge ${slug} claims failed validation: ${cause instanceof Error ? cause.message : String(cause)}`
     );
   }
-  return { type: slug, claims, subject: payload.sub, raw: vcJwt };
+  return {
+    type: slug,
+    claims,
+    subject: payload.sub,
+    ...issuanceMonth !== void 0 ? { issuanceMonth } : {},
+    raw: vcJwt
+  };
 }
 
 // src/verify-id-token.ts
@@ -259,4 +278,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-65H325O6.js.map
+//# sourceMappingURL=chunk-L2LTH4OY.js.map

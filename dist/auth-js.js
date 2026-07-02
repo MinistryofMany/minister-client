@@ -1,6 +1,6 @@
 import {
   verifyMinisterBadges
-} from "./chunk-65H325O6.js";
+} from "./chunk-L2LTH4OY.js";
 import "./chunk-OY24DUVT.js";
 
 // src/auth-js.ts

@@ -114,9 +114,35 @@ export async function verifyMinisterBadge(
     );
   }
 
-  // Validate the claims against that badge type's schema. `id` is
-  // stripped — it's redundant with `sub` and not part of the claims.
-  const { id: _id, ...rawClaims } = credentialSubject;
+  // Validate the claims against that badge type's schema. Two RESERVED keys
+  // are stripped first: `id` (redundant with `sub`) and `issuanceMonth`
+  // (Minister's coarse-issuance metadata, stamped at disclosure re-mint —
+  // cross-cutting VC metadata, never a per-type claim; stripping it keeps
+  // strict per-type schemas like tlsn-attestation passing).
+  const {
+    id: _id,
+    issuanceMonth: rawIssuanceMonth,
+    ...rawClaims
+  } = credentialSubject;
+
+  // Strictly format-check the coarse issuance bucket when present. A
+  // malformed value means issuer drift or a claim-shaped smuggle upstream of
+  // the signature — fail closed rather than hand policy code a garbage
+  // timestamp. Absent is fine (legacy Minister); downstream freshness checks
+  // then fail closed on maxAgeDays.
+  let issuanceMonth: string | undefined;
+  if (rawIssuanceMonth !== undefined) {
+    if (
+      typeof rawIssuanceMonth !== "string" ||
+      !/^\d{4}-(0[1-9]|1[0-2])$/.test(rawIssuanceMonth)
+    ) {
+      throw new VcVerificationError(
+        "VC `credentialSubject.issuanceMonth` is not a YYYY-MM UTC month",
+      );
+    }
+    issuanceMonth = rawIssuanceMonth;
+  }
+
   const schema = getBadgeClaimSchema(slug);
   let claims: Record<string, unknown>;
   try {
@@ -131,7 +157,13 @@ export async function verifyMinisterBadge(
     );
   }
 
-  return { type: slug, claims, subject: payload.sub, raw: vcJwt };
+  return {
+    type: slug,
+    claims,
+    subject: payload.sub,
+    ...(issuanceMonth !== undefined ? { issuanceMonth } : {}),
+    raw: vcJwt,
+  };
 }
 
 // Test seam: drop the cached remote JWKS for an issuer (or all issuers).

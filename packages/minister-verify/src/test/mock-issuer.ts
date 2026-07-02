@@ -16,13 +16,26 @@ export interface MockBadge {
   type: string;
   attributes: Record<string, string | number | boolean>;
   /**
-   * Backdates the VC `iat` by N days. NOTE: the real Minister can no longer
-   * produce this shape — post-MIN-1 it re-stamps `iat` to the disclosure
-   * instant on every disclosure, which is exactly why RP-side `maxAgeDays`
-   * (fed from the VC `iat`) is vacuous against real tokens. This knob exists
-   * only to exercise the policy engine's age arithmetic in isolation.
+   * The badge's TRUE issuance instant (unix seconds). Mirrors the real
+   * Minister disclosure shape: the VC's `iat` is ALWAYS the disclosure
+   * instant (MIN-1 re-stamps it), and the only issuance-derived residue is
+   * the coarse `credentialSubject.issuanceMonth` bucket ("YYYY-MM", UTC)
+   * computed from this value. Defaults to now.
+   */
+  issuedAtSec?: number;
+  /**
+   * Convenience: true issuance N days ago (`issuedAtSec = now - N days`).
+   * Ignored when `issuedAtSec` is set. Note this backdates ONLY the coarse
+   * issuanceMonth claim — never the `iat`, which the real Minister always
+   * stamps at disclosure time.
    */
   ageDays?: number;
+  /**
+   * Omit the issuanceMonth claim entirely — the shape a pre-upgrade
+   * ("legacy") Minister discloses. Verifiers must fail CLOSED on maxAgeDays
+   * for such badges.
+   */
+  omitIssuanceMonth?: boolean;
   expired?: boolean;
   /**
    * Override the VC `iss` (and the matching holder-DID prefix). Still signed
@@ -51,13 +64,24 @@ function badgeTypeToCredType(type: string): string {
   return `Minister${pascal}Credential`;
 }
 
+// The UTC calendar month ("YYYY-MM") containing `sec` — Minister's bucket
+// function for the coarse `issuanceMonth` disclosure claim.
+export function issuanceMonthOf(sec: number): string {
+  return new Date(sec * 1000).toISOString().slice(0, 7);
+}
+
 // Mirrors Minister's re-mint-at-disclosure shape: the badge subject is the
 // per-RP PAIRWISE DID `did:web:<host>:u:<sub>` (the SAME sub the id_token
-// carries), and the jti is a per-RP value driven by that sub — never a stable
-// cross-RP identifier.
+// carries), the jti is a per-RP value driven by that sub — never a stable
+// cross-RP identifier — and `iat` is ALWAYS the disclosure instant. The only
+// issuance-derived field is the coarse `issuanceMonth` credentialSubject
+// claim (from the badge's true issuance instant), exactly what the real
+// re-mint emits.
 async function signVc(idTokenSub: string, badge: MockBadge): Promise<string> {
   const nowSec = Math.floor(Date.now() / 1000);
-  const iatSec = badge.expired ? nowSec - 120 : nowSec - (badge.ageDays ?? 0) * 86_400;
+  // Post-MIN-1 fidelity: iat is DISCLOSURE-stamped, never issuance-derived.
+  const iatSec = badge.expired ? nowSec - 120 : nowSec;
+  const issuedAtSec = badge.issuedAtSec ?? nowSec - (badge.ageDays ?? 0) * 86_400;
   const vcIssuer = badge.vcIssuer ?? MOCK_VC_ISSUER;
   const sub = badge.subOverride ?? idTokenSub;
   const subjectId = `${vcIssuer}:u:${sub}`;
@@ -65,7 +89,11 @@ async function signVc(idTokenSub: string, badge: MockBadge): Promise<string> {
     vc: {
       "@context": ["https://www.w3.org/ns/credentials/v2"],
       type: ["VerifiableCredential", badgeTypeToCredType(badge.type)],
-      credentialSubject: { id: subjectId, ...badge.attributes },
+      credentialSubject: {
+        id: subjectId,
+        ...badge.attributes,
+        ...(badge.omitIssuanceMonth ? {} : { issuanceMonth: issuanceMonthOf(issuedAtSec) }),
+      },
     },
   })
     .setProtectedHeader({ alg: "EdDSA", kid: KID, typ: "vc+jwt" })
@@ -73,7 +101,8 @@ async function signVc(idTokenSub: string, badge: MockBadge): Promise<string> {
     .setSubject(subjectId)
     .setJti(`mock-pairwise-jti:${sub}:${badge.type}`)
     .setIssuedAt(iatSec)
-    .setExpirationTime(badge.expired ? nowSec - 60 : "365d");
+    // Presentation-shaped, like the real re-mint (1h disclosure TTL).
+    .setExpirationTime(badge.expired ? nowSec - 60 : nowSec + 3_600);
   return builder.sign(privateKey);
 }
 

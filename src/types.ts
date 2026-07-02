@@ -50,25 +50,27 @@ export interface MinisterClaims {
 /**
  * A signature-verified, schema-validated badge.
  *
- * TEMPORAL CLAIMS ARE DISCLOSURE-SHAPED, NOT ISSUANCE-SHAPED (MIN-1).
+ * TEMPORAL JWT CLAIMS ARE DISCLOSURE-SHAPED, NOT ISSUANCE-SHAPED (MIN-1).
  * Minister re-mints every disclosed badge at disclosure time: the VC's
  * `iat`/`nbf` are the disclosure instant and `exp` is disclosure time plus a
  * short presentation TTL (clamped so it never exceeds the badge's real
- * expiry). An issuance-derived timestamp would be a stable cross-RP
- * correlator, so none survives disclosure. Consequences for relying parties:
+ * expiry). A fine-grained issuance-derived timestamp would be a stable
+ * cross-RP correlator, so none survives disclosure — never derive badge age
+ * from `iat`/`exp`.
  *
- * - Any RP-side freshness check derived from the VC `iat` is VACUOUS. In
- *   particular, `@ministryofmany/policy`'s `maxAgeDays` — fed by
- *   `@ministryofmany/minister-verify`, which derives `issuedAt` from the VC
- *   `iat` — sees every disclosed badge as seconds old and therefore passes
- *   unconditionally. It is NOT an effective defense-in-depth today.
- * - Freshness is still enforced, but on Minister's side: a `minister_policy`
- *   `maxAgeDays` leaf is evaluated at consent against the badge's true
- *   database issuance time, before anything is disclosed. The composed system
- *   remains safe; only the redundant RP-side check is inert.
- * - Giving RPs a verifiable issuance-age signal without re-opening the
- *   timestamp-correlation channel (e.g. a coarse bucketed age claim) is a
- *   tracked design follow-up — do not repurpose `iat`/`exp` for it.
+ * The ONE issuance-derived signal is the deliberately COARSE
+ * `issuanceMonth` field below ("YYYY-MM", the UTC calendar month of the
+ * badge's true issuance, a reserved `credentialSubject` key stamped by
+ * Minister at re-mint). Freshness checks derive from IT: map the month to
+ * its bucket START so the computed age is always ≥ the true age (a stale
+ * badge can never pass — fail-closed), and accept that sub-month precision
+ * is intentionally lost (a `maxAgeDays` of N months works; sub-month gates
+ * are out of contract). `@ministryofmany/minister-verify` feeds
+ * `@ministryofmany/policy`'s `maxAgeDays` exactly this way, and Minister
+ * additionally enforces the same coarse check consent-side before
+ * disclosing. Month granularity keeps the field shared-by-many (≤ ~13
+ * buckets across a badge population with the default 1-year lifetime,
+ * ≈ 3.7 bits), so it is a cohort marker, not a re-identifier.
  */
 export interface VerifiedBadge {
   // The Minister badge slug, e.g. "age-over-18".
@@ -91,6 +93,14 @@ export interface VerifiedBadge {
   // `verifyMinisterBadge` does NOT bind (it has no id_token) — it only checks
   // the VC-internal `credentialSubject.id === sub` self-consistency.
   subject: string;
+  // The UTC calendar month ("YYYY-MM") containing the badge's TRUE issuance
+  // instant — Minister's reserved coarse-issuance metadata (see the interface
+  // doc above). IDENTICAL for the same badge at every RP by design (a
+  // shared-by-many cohort bucket, not a pairwise field) and strictly
+  // format-checked (a present-but-malformed value rejects the badge).
+  // Undefined when the disclosing Minister predates the claim; freshness
+  // checks then fail closed (no evidence ⇒ no maxAgeDays pass).
+  issuanceMonth?: string;
   // The original VC JWT, for storage or forwarding.
   raw: string;
 }

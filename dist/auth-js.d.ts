@@ -1,6 +1,6 @@
 import { OIDCConfig } from '@auth/core/providers';
 import { JWTPayload } from 'jose';
-import { K as KeyInput, B as BadgesResult } from './types-Bh2HfBtQ.js';
+import { K as KeyInput, B as BadgesResult } from './types-B-nDX3ql.js';
 
 interface MinisterProviderOptions {
     clientId: string;
