@@ -24,6 +24,9 @@ export { hashPinnedArtifactSource, staticArtifactSource } from "./artifacts.js";
  * the RLN engine yields an RLN proof. The returned proof carries its `kind`.
  */
 export async function generateMembershipProof(ctx: ProveContext): Promise<MembershipProof> {
-  const engine = engineFor(ctx.snapshot.engine);
+  // engineFor is async: an rln snapshot lazy-loads the rln engine (and with it
+  // the @ministryofmany/rln island) on first use; a semaphore snapshot resolves
+  // from the static module immediately.
+  const engine = await engineFor(ctx.snapshot.engine);
   return engine.prove(ctx);
 }

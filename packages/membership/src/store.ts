@@ -107,8 +107,10 @@ export function liveSnapshotStore(
 /**
  * Lazily resolve the shipped engine matching a provider's `engine`. Imported
  * lazily to avoid a static import cycle (engines import the store's TYPES only).
+ * engineFor is itself async (the rln engine sits behind a dynamic import), so
+ * this awaits through both hops.
  */
 async function resolveShippedEngine(provider: MerkleGroupProvider): Promise<ProofEngine> {
   const { engineFor } = await import("./engines/index.js");
-  return engineFor(provider.engine);
+  return await engineFor(provider.engine);
 }

@@ -1,7 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { Identity } from "@semaphore-protocol/identity";
 import { createMembership } from "./membership.js";
-import { semaphoreEngine, rlnEngine } from "./engines/index.js";
+import { semaphoreEngine } from "./engines/index.js";
+// The rln engine is deliberately NOT on the engines barrel (lazy-load boundary);
+// tests that need it statically import the module the /rln subpath re-exports.
+import { rlnEngine } from "./engines/rln.js";
 import { inMemorySnapshotStore } from "./test-helpers.js";
 import type { EligibleLeaf, RlnGroupProvider, SemaphoreGroupProvider } from "./provider.js";
 import type { TreeRef } from "./types.js";

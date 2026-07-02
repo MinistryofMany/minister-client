@@ -38,7 +38,11 @@ export { resolveEngineParams } from "./provider.js";
 export type { SnapshotStore, GetByRootOptions, GetByRootResult } from "./store.js";
 export { liveSnapshotStore } from "./store.js";
 
-// The proof-engine seam + the two shipped engines.
+// The proof-engine seam + the shipped engines. The semaphore engine is static;
+// the rln engine is NOT exported here - it lives behind the lazy
+// engineFor("rln") / loadRlnEngine() (and the @ministryofmany/membership/rln
+// subpath for static import), so a semaphore-only consumer's graph never touches
+// the @ministryofmany/rln island (rlnjs + Semaphore v3).
 export type {
   SemaphoreProof,
   RlnProof,
@@ -49,7 +53,7 @@ export type {
   VerifyFailure,
   ProofEngine,
 } from "./engine.js";
-export { semaphoreEngine, rlnEngine, engineFor } from "./engines/index.js";
+export { semaphoreEngine, engineFor, loadRlnEngine } from "./engines/index.js";
 
 // Injectable artifact loading (also re-exported from /client).
 export type { ArtifactSource, ArtifactPin } from "./artifacts.js";

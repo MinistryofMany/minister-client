@@ -76,9 +76,6 @@ importers:
       '@ministryofmany/identity':
         specifier: workspace:*
         version: link:../identity
-      '@ministryofmany/rln':
-        specifier: workspace:*
-        version: link:../rln
       '@semaphore-protocol/group':
         specifier: ^4.0.3
         version: 4.14.2
@@ -86,6 +83,9 @@ importers:
         specifier: ^4.0.3
         version: 4.14.2(@semaphore-protocol/group@4.14.2)(@semaphore-protocol/identity@4.14.2)(@types/snarkjs@0.7.9)(commander@12.1.0)
     devDependencies:
+      '@ministryofmany/rln':
+        specifier: workspace:*
+        version: link:../rln
       '@semaphore-protocol/identity':
         specifier: ^4.0.3
         version: 4.14.2

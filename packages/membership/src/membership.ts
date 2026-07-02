@@ -47,27 +47,40 @@ export interface Membership {
 }
 
 export function createMembership(config: MembershipConfig): Membership {
-  const engine = config.engine ?? engineFor(config.provider.engine);
-
-  if (engine.kind !== config.provider.engine) {
+  // An EXPLICIT engine is validated synchronously, exactly as before. The
+  // defaulted engine cannot mismatch (engineFor returns the engine matching
+  // provider.engine by construction), so the guard only needs the explicit case.
+  if (config.engine && config.engine.kind !== config.provider.engine) {
     throw new Error(
-      `createMembership: provider.engine=${config.provider.engine} but engine.kind=${engine.kind}.`,
+      `createMembership: provider.engine=${config.provider.engine} but engine.kind=${config.engine.kind}.`,
     );
   }
 
-  const store = config.store ?? liveSnapshotStore(config.provider, engine);
+  // The DEFAULT engine is resolved lazily (memoized) because engineFor is async:
+  // the rln engine sits behind a dynamic import so a semaphore-only consumer
+  // never loads the @ministryofmany/rln island. createMembership itself stays
+  // synchronous; every method that needs the engine is already async.
+  let lazyEngine: Promise<ProofEngine<MembershipProof>> | null = null;
+  const resolveEngine = (): Promise<ProofEngine<MembershipProof>> =>
+    (lazyEngine ??= config.engine
+      ? Promise.resolve(config.engine)
+      : engineFor(config.provider.engine));
+
+  // liveSnapshotStore resolves the shipped engine itself when none is given.
+  const store = config.store ?? liveSnapshotStore(config.provider, config.engine);
 
   return {
     async current(ref: TreeRef): Promise<MembershipSnapshot> {
-      return currentSnapshot(config.provider, engine, ref);
+      return currentSnapshot(config.provider, await resolveEngine(), ref);
     },
 
     async refresh(ref: TreeRef): Promise<MembershipSnapshot> {
-      const snap = await currentSnapshot(config.provider, engine, ref);
+      const snap = await currentSnapshot(config.provider, await resolveEngine(), ref);
       return store.put(snap);
     },
 
     async verify(ctx: Omit<VerifyContext, "store">): Promise<VerifyResult> {
+      const engine = await resolveEngine();
       return engine.verify({ ...ctx, store });
     },
   };

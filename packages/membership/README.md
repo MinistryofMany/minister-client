@@ -12,7 +12,12 @@ It consumes:
   `semaphoreEngine` runs over it.
 - [`@ministryofmany/rln`](../rln) - the Semaphore **v3 + RLN** quarantine island
   (bigint-only surface). The `rlnEngine` runs over it; no v3 type leaks into this
-  package's public surface.
+  package's public surface. **Optional peer dependency, lazy-loaded:** the rln
+  engine lives behind `engineFor("rln")` / `loadRlnEngine()` (a memoized dynamic
+  import) and the static `@ministryofmany/membership/rln` subpath - it is NOT
+  exported from the package root - so a semaphore-only consumer neither installs
+  nor evaluates the rlnjs island. An RLN consumer installs `@ministryofmany/rln`
+  alongside this package.
 
 Replay / uniqueness is **not** here: `verify()` returns the nullifier and the app
 records it (via [`@ministryofmany/nullifier`](../nullifier)).
@@ -41,8 +46,11 @@ records it (via [`@ministryofmany/nullifier`](../nullifier)).
   persists and recomputes the root live **exactly once per verify**.
 - **`ProofEngine`** - fixes the proof payload, the `commitment -> leaf` mapping,
   the depth discipline, and prove/verify. Two ship in the box: **`semaphoreEngine`**
-  (vanilla v4, dynamic LeanIMT, leaf = identity commitment) and **`rlnEngine`**
-  (RLN, fixed depth-20, leaf = `rateCommitment = poseidon2(ic, userMessageLimit)`).
+  (vanilla v4, dynamic LeanIMT, leaf = identity commitment; static export from the
+  root) and **`rlnEngine`** (RLN, fixed depth-20, leaf =
+  `rateCommitment = poseidon2(ic, userMessageLimit)`; imported statically from
+  `@ministryofmany/membership/rln` or resolved lazily via `engineFor("rln")` /
+  `loadRlnEngine()` - requires the optional peer `@ministryofmany/rln`).
 - **`ArtifactSource`** (client) - injectable WASM/zkey loading;
   `hashPinnedArtifactSource` (FreedInk's SHA-256-pinned fetch, data-driven) and
   `staticArtifactSource` (pre-loaded bytes) ship.
