@@ -317,3 +317,95 @@ describe('atLeast counts DISTINCT satisfying badges (no double-count across bran
     }
   });
 });
+
+describe('general-path work bounding (complexity-DoS regression)', () => {
+  // The general (subtree-branch) atLeast path enumerates subset-minimal
+  // witness antichains, which are EXPONENTIAL in the disclosed-badge count in
+  // the worst case: an allOf of k distinct-type leaves with c interchangeable
+  // badges per type has c^k minimal witnesses, all inside the caller-side
+  // policy shape caps (16 children). Before the fix, the un-ticked quadratic
+  // scan in minimalMasks ran ~9.5 MINUTES on the 16-leaf / 48-badge input
+  // below before the budget finally threw. The evaluator now charges every
+  // unit of work (including minimalMasks) against EVAL_BUDGET, caps candidate
+  // witness lists, and caps the disclosed-badge count - all fail closed.
+
+  const BUDGET_ERROR = 'policy evaluation exceeded work budget';
+
+  /** atLeast{n:1, of:[allOf: K distinct-type leaves]} - forces the general path. */
+  function allOfUnderAtLeast(K: number): PolicyNode {
+    return {
+      atLeast: {
+        n: 1,
+        of: [{ allOf: Array.from({ length: K }, (_, i) => ({ badge: { type: `t${i}` } })) }],
+      },
+    };
+  }
+
+  /** `perType` interchangeable badges for each of `types` distinct types. */
+  function wallet(types: number, perType: number): VerifiedBadge[] {
+    const out: VerifiedBadge[] = [];
+    for (let i = 0; i < types; i++) {
+      for (let p = 0; p < perType; p++) out.push(badge(`t${i}`, { provider: `p${p}` }));
+    }
+    return out;
+  }
+
+  it('pathological cross-product input fails closed in bounded time (was ~9.5 min)', () => {
+    // 16 leaves x 3 badges per type = 48 badges => 3^16 ≈ 43M minimal
+    // witnesses. Must throw the budget error long before pegging a core.
+    const start = performance.now();
+    expect(() => evaluate(allOfUnderAtLeast(16), wallet(16, 3), NOW)).toThrow(BUDGET_ERROR);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  it('the same large policy with a legitimate wallet (one badge per type) still admits', () => {
+    // Identical 16-leaf policy; without badge multiplicity the witness list
+    // stays at one mask per level. The guards must key on combinatorial
+    // blowup, not on policy size.
+    const start = performance.now();
+    expect(evaluate(allOfUnderAtLeast(16), wallet(16, 1), NOW)).toBe(true);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  it('missing one required type still correctly denies (fail-closed guard is not the only deny)', () => {
+    expect(evaluate(allOfUnderAtLeast(16), wallet(15, 1), NOW)).toBe(false);
+  });
+
+  it('moderate badge multiplicity under a big allOf still admits (9 leaves x 3 per type)', () => {
+    // 3^9 = 19,683 equal-popcount witnesses - a chunky-but-terminating input
+    // just under the witness-list cap. Must still return the exact admit.
+    const start = performance.now();
+    expect(evaluate(allOfUnderAtLeast(9), wallet(9, 3), NOW)).toBe(true);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  it('largest legitimate atLeast antichain (C(16,8) = 12,870) still admits within budget', () => {
+    // n=8 over 16 single-witness SUBTREE branches (anyOf-wrapped to force the
+    // general path) with one badge per type: every minimal packing is a
+    // distinct witness, so the antichain hits the caller-validated maximum.
+    // This admitted before the fix (~630ms) and must keep admitting.
+    const policy: PolicyNode = {
+      atLeast: {
+        n: 8,
+        of: Array.from({ length: 16 }, (_, i) => ({
+          anyOf: [{ badge: { type: `t${i}` } }] as PolicyNode[],
+        })),
+      },
+    };
+    const start = performance.now();
+    expect(evaluate(policy, wallet(16, 1), NOW)).toBe(true);
+    expect(performance.now() - start).toBeLessThan(1000);
+  });
+
+  it('caps the disclosed-badge count on the general path (fail closed)', () => {
+    const policy: PolicyNode = {
+      atLeast: { n: 1, of: [{ anyOf: [{ badge: { type: 't0' } }] }] },
+    };
+    // 513 badges of one type exceeds MAX_GENERAL_PATH_BADGES = 512.
+    expect(() => evaluate(policy, wallet(1, 513), NOW)).toThrow(BUDGET_ERROR);
+    // The leaf-only fast path stays uncapped: same width, flat leaves.
+    expect(
+      evaluate({ atLeast: { n: 1, of: [{ badge: { type: 't0' } }] } }, wallet(1, 513), NOW),
+    ).toBe(true);
+  });
+});

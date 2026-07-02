@@ -53,14 +53,21 @@ function leafSatisfied(leaf: BadgeLeaf, badges: VerifiedBadge[], now: number): b
 //  * General path (a branch is itself a subtree that consumes >= 1 badge):
 //    exact subset-minimal disjoint-witness search. Each node reports the
 //    antichain of MINIMAL badge sets that satisfy it (`witnessMasks`); the
-//    atLeast search then packs n branches with disjoint witnesses. Worst case is
-//    exponential in the subtree, so it is bounded two ways: (a) callers validate
-//    breadth/depth first (Minister's `policyBoundsViolation`: MAX_NODE_CHILDREN
-//    16, MAX_ATLEAST_N 16, MAX_POLICY_NODES 64, MAX_POLICY_DEPTH 8; Discreetly
-//    mirrors it), and (b) an internal operation budget (`EVAL_BUDGET`) that
-//    throws - i.e. fails closed - on pathological unbounded input. Minimal-
-//    witness filtering keeps the working set to the antichain, which for real
-//    policies is tiny.
+//    atLeast search then packs n branches with disjoint witnesses. Worst case
+//    is EXPONENTIAL in the disclosed-badge count M, not just in the policy
+//    shape: an `allOf` of k leaves with c interchangeable badges per leaf has
+//    c^k minimal witnesses, so caller breadth/depth validation (Minister's
+//    `policyBoundsViolation`: MAX_NODE_CHILDREN 16, MAX_ATLEAST_N 16,
+//    MAX_POLICY_NODES 64, MAX_POLICY_DEPTH 8; Discreetly mirrors it) does NOT
+//    bound the work - 16 leaves x 3 badges each is 3^16 witnesses inside those
+//    caps. The path is instead bounded by hard fail-closed guards, all of which
+//    throw (=> deny): every unit of work - node visits, badge scans, candidate-
+//    mask pushes, and each popcount/subset step inside `minimalMasks` - is
+//    charged against EVAL_BUDGET; candidate witness lists are capped at
+//    MAX_WITNESS_MASKS; and the disclosed-badge count is capped at
+//    MAX_GENERAL_PATH_BADGES (which also bounds the bigint mask width, keeping
+//    each charged op O(1)). Real policies have tiny witness antichains and
+//    never approach the guards.
 //
 // The Minister-side mirror (`apps/minister/src/lib/oidc-policy.ts`) MUST keep
 // these semantics byte-for-behavior identical (drift-checked); the matching
@@ -108,14 +115,54 @@ interface EvalCtx {
   ops: number;
 }
 
-const EVAL_BUDGET = 2_000_000;
+const EVAL_BUDGET = 10_000_000;
+
+/**
+ * Hard cap on any candidate witness-mask list in the general path. The largest
+ * antichain a policy inside the caller-validated shape caps can legitimately
+ * need is C(16, 8) = 12,870 (an atLeast n=8 over 16 single-witness subtree
+ * branches); 32,768 leaves ~2.5x headroom while bounding memory and cutting
+ * off cross-product explosions (c^k witness growth) early.
+ */
+const MAX_WITNESS_MASKS = 32_768;
+
+/**
+ * Disclosed-badge cap for the general path only (the leaf fast path is
+ * polynomial in M and uncapped). Bounds the bigint mask width so every charged
+ * operation is O(1), which is what makes EVAL_BUDGET a wall-time bound.
+ * Generous: Minister minimizes disclosures to a minimal satisfying set, so
+ * real inputs are dozens at most.
+ */
+const MAX_GENERAL_PATH_BADGES = 512;
+
+const BUDGET_ERROR = 'policy evaluation exceeded work budget';
+
+/**
+ * Charge `ops` units of work against the evaluation budget. Fail closed: a
+ * pathological input must never hang the event loop or silently admit. This
+ * guarantee holds only because EVERY hot loop in the general path charges its
+ * work here - including the subset scans inside `minimalMasks`, which are
+ * quadratic in candidate-list length and were the un-ticked core of the
+ * complexity-DoS finding.
+ */
+function charge(ctx: EvalCtx, ops: number): void {
+  ctx.ops += ops;
+  if (ctx.ops > EVAL_BUDGET) {
+    throw new Error(BUDGET_ERROR);
+  }
+}
 
 function tick(ctx: EvalCtx): void {
-  if (++ctx.ops > EVAL_BUDGET) {
-    // Fail closed: an unbounded/pathological policy that a caller failed to
-    // breadth-cap must never hang the event loop or silently admit.
-    throw new Error('policy evaluation exceeded work budget');
+  charge(ctx, 1);
+}
+
+/** Budget-charged push that also caps candidate-list growth (fail closed). */
+function pushMask(list: bigint[], mask: bigint, ctx: EvalCtx): void {
+  tick(ctx);
+  if (list.length >= MAX_WITNESS_MASKS) {
+    throw new Error(BUDGET_ERROR);
   }
+  list.push(mask);
 }
 
 /**
@@ -127,6 +174,7 @@ function tick(ctx: EvalCtx): void {
 function witnessMasks(node: PolicyNode, avail: bigint, ctx: EvalCtx): bigint[] {
   tick(ctx);
   if (isBadgeLeaf(node)) {
+    charge(ctx, ctx.badges.length); // the scan below is O(M) per leaf visit
     const out: bigint[] = [];
     for (let j = 0; j < ctx.badges.length; j++) {
       const bit = 1n << BigInt(j);
@@ -139,6 +187,8 @@ function witnessMasks(node: PolicyNode, avail: bigint, ctx: EvalCtx): bigint[] {
   if (isAllOf(node)) {
     // Every child must hold; a witness is the union of one witness per child
     // (reuse within the allOf lets those unions coincide on shared badges).
+    // This cross product is the exponential core: c witnesses per child grows
+    // `next` toward c^k, so growth is both charged and capped via pushMask.
     let combos: bigint[] = [0n];
     for (const child of node.allOf) {
       const childWitnesses = witnessMasks(child, avail, ctx);
@@ -146,70 +196,105 @@ function witnessMasks(node: PolicyNode, avail: bigint, ctx: EvalCtx): bigint[] {
       const next: bigint[] = [];
       for (const partial of combos) {
         for (const w of childWitnesses) {
-          tick(ctx);
-          next.push(partial | w);
+          pushMask(next, partial | w, ctx);
         }
       }
-      combos = minimalMasks(next);
+      combos = minimalMasks(next, ctx);
     }
     return combos;
   }
   if (isAnyOf(node)) {
     const out: bigint[] = [];
     for (const child of node.anyOf) {
-      for (const w of witnessMasks(child, avail, ctx)) out.push(w);
+      for (const w of witnessMasks(child, avail, ctx)) pushMask(out, w, ctx);
     }
-    return minimalMasks(out);
+    return minimalMasks(out, ctx);
   }
   if (isAtLeast(node)) {
-    return atLeastWitnessMasks(node.atLeast.of, node.atLeast.n, avail, ctx);
+    return atLeastWitnessMasks(node.atLeast.of, 0, node.atLeast.n, avail, ctx);
   }
   const _exhaustive: never = node;
   throw new Error(`unknown policy node shape: ${JSON.stringify(_exhaustive)}`);
 }
 
 /**
- * Minimal union masks that satisfy at least `n` of `branches` with pairwise-
- * disjoint witnesses. Empty array means fewer than `n` branches can be packed.
+ * Minimal union masks that satisfy at least `n` of `branches[start..]` with
+ * pairwise-disjoint witnesses. Empty array means fewer than `n` branches can
+ * be packed. Recurses on `start` rather than slicing so each level does O(1)
+ * work outside the charged calls (a `[first, ...rest]` spread here would be an
+ * un-charged O(B) copy per level).
  */
 function atLeastWitnessMasks(
   branches: PolicyNode[],
+  start: number,
   n: number,
   avail: bigint,
   ctx: EvalCtx,
 ): bigint[] {
   if (n <= 0) return [0n]; // satisfied with no further consumption
-  if (branches.length < n) return []; // not enough branches left to reach n
+  if (branches.length - start < n) return []; // not enough branches left to reach n
   tick(ctx);
-  const [first, ...rest] = branches;
+  const first = branches[start]!;
   const out: bigint[] = [];
   // Option A: skip `first`, pack all n from the rest.
-  for (const u of atLeastWitnessMasks(rest, n, avail, ctx)) out.push(u);
+  for (const u of atLeastWitnessMasks(branches, start + 1, n, avail, ctx)) {
+    pushMask(out, u, ctx);
+  }
   // Option B: satisfy `first` with a disjoint witness, then pack n-1 from the
   // rest using only the badges `first` did not consume.
-  for (const w of witnessMasks(first!, avail, ctx)) {
-    tick(ctx);
-    for (const u of atLeastWitnessMasks(rest, n - 1, avail & ~w, ctx)) {
-      out.push(w | u);
+  for (const w of witnessMasks(first, avail, ctx)) {
+    for (const u of atLeastWitnessMasks(branches, start + 1, n - 1, avail & ~w, ctx)) {
+      pushMask(out, w | u, ctx);
     }
   }
-  return minimalMasks(out);
+  return minimalMasks(out, ctx);
 }
 
-/** Dedupe, then drop any mask that is a strict superset of another. */
-function minimalMasks(masks: bigint[]): bigint[] {
+/**
+ * Dedupe, then drop any mask that is a strict superset of another (keep the
+ * subset-minimal antichain). All work is charged against the budget - this
+ * scan is worst-case quadratic in the list length, and the list itself can be
+ * exponential in the badge count, so un-charged it was the DoS hot loop.
+ *
+ * Masks are bucketed by popcount, ascending. A strict subset always has a
+ * strictly smaller popcount (equal popcount + subset => equal, removed by the
+ * dedupe), and every dominated mask has a subset-MINIMAL strict subset
+ * (induction on popcount: a minimal-popcount strict subset present in the list
+ * cannot itself be dominated). So `m` is dominated iff a KEPT mask of smaller
+ * popcount is a subset of `m` - each mask is compared only against those. For
+ * the equal-popcount antichains that big-but-legitimate policies produce
+ * (e.g. atLeast n=8 over 16 single-witness branches: C(16,8) masks, all
+ * popcount 8) this does zero subset comparisons; the output SET is identical
+ * to a full pairwise scan, only its order differs, and callers consume it as
+ * a set.
+ */
+function minimalMasks(masks: bigint[], ctx: EvalCtx): bigint[] {
   const uniq = Array.from(new Set(masks));
-  const out: bigint[] = [];
+  const byPopcount = new Map<number, bigint[]>();
   for (const m of uniq) {
-    let dominated = false;
-    for (const other of uniq) {
-      // `other` (a distinct value) is a subset of `m` => `m` is dominated.
-      if (other !== m && (m & other) === other) {
-        dominated = true;
-        break;
+    let bits = 0;
+    for (let x = m; x !== 0n; x &= x - 1n) bits++;
+    charge(ctx, 1 + bits);
+    const bucket = byPopcount.get(bits);
+    if (bucket) bucket.push(m);
+    else byPopcount.set(bits, [m]);
+  }
+  const out: bigint[] = [];
+  const popcounts = Array.from(byPopcount.keys()).sort((a, b) => a - b);
+  for (const bits of popcounts) {
+    const lowerEnd = out.length; // out[0..lowerEnd) = kept masks of smaller popcount
+    for (const m of byPopcount.get(bits)!) {
+      charge(ctx, 1 + lowerEnd); // subset scan, charged up front
+      let dominated = false;
+      for (let i = 0; i < lowerEnd; i++) {
+        const other = out[i]!;
+        if ((m & other) === other) {
+          dominated = true;
+          break;
+        }
       }
+      if (!dominated) out.push(m);
     }
-    if (!dominated) out.push(m);
   }
   return out;
 }
@@ -232,9 +317,14 @@ export function evaluate(policy: PolicyNode, badges: VerifiedBadge[], now: numbe
       return maxLeafMatching(leaves, badges, now) >= n;
     }
     // General path: at least one branch is a subtree that consumes badges.
+    // Cap M here (fail closed) so the bigint masks stay narrow and every
+    // budget-charged operation below is O(1); see MAX_GENERAL_PATH_BADGES.
+    if (badges.length > MAX_GENERAL_PATH_BADGES) {
+      throw new Error(BUDGET_ERROR);
+    }
     const ctx: EvalCtx = { badges, now, ops: 0 };
     const full = badges.length === 0 ? 0n : (1n << BigInt(badges.length)) - 1n;
-    return atLeastWitnessMasks(of, n, full, ctx).length > 0;
+    return atLeastWitnessMasks(of, 0, n, full, ctx).length > 0;
   }
   // Exhaustiveness (compile-time) + fail-closed (runtime): a new PolicyNode
   // variant fails to compile here; a malformed/unrecognized runtime shape throws
