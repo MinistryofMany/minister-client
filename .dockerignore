@@ -1,0 +1,11 @@
+# This repo is consumed as a docker build context by sibling apps (Deforum's
+# Dockerfile takes it as a named additional context). Keep host installs and
+# junk out of the context; dist/ is committed and MUST be included.
+node_modules
+packages/*/node_modules
+.git
+.env
+.env.*
+*.log
+.DS_Store
+.claude
