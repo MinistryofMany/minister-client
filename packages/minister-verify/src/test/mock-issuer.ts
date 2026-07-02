@@ -15,6 +15,13 @@ export async function jwks(): Promise<{ keys: JWK[] }> {
 export interface MockBadge {
   type: string;
   attributes: Record<string, string | number | boolean>;
+  /**
+   * Backdates the VC `iat` by N days. NOTE: the real Minister can no longer
+   * produce this shape — post-MIN-1 it re-stamps `iat` to the disclosure
+   * instant on every disclosure, which is exactly why RP-side `maxAgeDays`
+   * (fed from the VC `iat`) is vacuous against real tokens. This knob exists
+   * only to exercise the policy engine's age arithmetic in isolation.
+   */
   ageDays?: number;
   expired?: boolean;
   /**

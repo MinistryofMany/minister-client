@@ -47,7 +47,29 @@ export interface MinisterClaims {
   raw: string;
 }
 
-// A signature-verified, schema-validated badge.
+/**
+ * A signature-verified, schema-validated badge.
+ *
+ * TEMPORAL CLAIMS ARE DISCLOSURE-SHAPED, NOT ISSUANCE-SHAPED (MIN-1).
+ * Minister re-mints every disclosed badge at disclosure time: the VC's
+ * `iat`/`nbf` are the disclosure instant and `exp` is disclosure time plus a
+ * short presentation TTL (clamped so it never exceeds the badge's real
+ * expiry). An issuance-derived timestamp would be a stable cross-RP
+ * correlator, so none survives disclosure. Consequences for relying parties:
+ *
+ * - Any RP-side freshness check derived from the VC `iat` is VACUOUS. In
+ *   particular, `@ministryofmany/policy`'s `maxAgeDays` — fed by
+ *   `@ministryofmany/minister-verify`, which derives `issuedAt` from the VC
+ *   `iat` — sees every disclosed badge as seconds old and therefore passes
+ *   unconditionally. It is NOT an effective defense-in-depth today.
+ * - Freshness is still enforced, but on Minister's side: a `minister_policy`
+ *   `maxAgeDays` leaf is evaluated at consent against the badge's true
+ *   database issuance time, before anything is disclosed. The composed system
+ *   remains safe; only the redundant RP-side check is inert.
+ * - Giving RPs a verifiable issuance-age signal without re-opening the
+ *   timestamp-correlation channel (e.g. a coarse bucketed age claim) is a
+ *   tracked design follow-up — do not repurpose `iat`/`exp` for it.
+ */
 export interface VerifiedBadge {
   // The Minister badge slug, e.g. "age-over-18".
   type: string;

@@ -44,11 +44,22 @@ export interface VerifierDeps {
 }
 
 /**
- * Recover the VC `iat` (seconds) from an already-verified VC JWT. The SDK's
- * `VerifiedBadge` drops `iat`, but the policy engine needs `issuedAt`. No
- * signature work happens here: the SDK already verified `raw`, so we only
- * base64url-decode the payload segment and read `iat`. Returns 0 when the
- * claim is absent or the payload is unparseable.
+ * Recover the VC `iat` (seconds) from an already-verified VC JWT to fill the
+ * policy engine's `issuedAt` slot. No signature work happens here: the SDK
+ * already verified `raw`, so we only base64url-decode the payload segment and
+ * read `iat`. Returns 0 when the claim is absent or the payload is
+ * unparseable.
+ *
+ * KNOWN REGRESSION (documented, accepted): post-MIN-1 this is NOT the badge's
+ * issuance time. Minister re-mints every disclosed badge at disclosure time
+ * (pairwise sub/jti, and `iat`/`nbf`/`exp` re-stamped to the disclosure
+ * instant), so the recovered `iat` is "seconds ago" for every live token.
+ * Any `maxAgeDays` policy leaf evaluated against this value passes
+ * unconditionally — the RP-side freshness check is vacuous. The composed
+ * system is still safe because Minister enforces `maxAgeDays` consent-side
+ * against the badge's true database issuance time before disclosing, but do
+ * not rely on this field as defense-in-depth. A verifiable, coarse
+ * issuance-age claim for RPs is a tracked design follow-up.
  */
 function iatFromRawVc(rawVcJwt: string): number {
   const seg = rawVcJwt.split(".")[1];
@@ -115,6 +126,9 @@ export function makeVerifier(deps: VerifierDeps) {
       badges: badges.map((b: VerifiedBadgeSdk) => ({
         type: b.type,
         attributes: b.claims as VerifiedBadge["attributes"],
+        // Disclosure time, not issuance time — see iatFromRawVc: RP-side
+        // maxAgeDays evaluated on this is vacuous (Minister enforces
+        // freshness consent-side).
         issuedAt: iatFromRawVc(b.raw),
       })),
     };
