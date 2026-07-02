@@ -1,7 +1,7 @@
 import {
   badgeTypeOf,
   getBadgeClaimSchema
-} from "./chunk-U2JFQKFV.js";
+} from "./chunk-OY24DUVT.js";
 
 // src/did.ts
 function buildDid(domain) {
@@ -9,8 +9,28 @@ function buildDid(domain) {
 }
 function didFromIssuer(issuer) {
   const url = new URL(issuer);
+  if (url.pathname !== "" && url.pathname !== "/") {
+    throw new Error(
+      `Minister issuer must be an origin with no path (got path "${url.pathname}" in "${issuer}")`
+    );
+  }
+  if (url.search !== "" || url.hash !== "") {
+    throw new Error(`Minister issuer must be an origin with no query or fragment: "${issuer}"`);
+  }
   const host = url.port ? `${url.hostname}%3A${url.port}` : url.hostname;
   return buildDid(host);
+}
+function buildPairwiseSubjectDid(issuer, sub) {
+  return `${didFromIssuer(issuer)}:u:${sub}`;
+}
+function parsePairwiseSubjectDid(subject) {
+  const marker = ":u:";
+  const idx = subject.lastIndexOf(marker);
+  if (idx <= 0) return null;
+  const issuerDid = subject.slice(0, idx);
+  const sub = subject.slice(idx + marker.length);
+  if (!issuerDid.startsWith("did:web:") || sub.length === 0 || sub.includes(":")) return null;
+  return { issuerDid, sub };
 }
 
 // src/errors.ts
@@ -38,13 +58,18 @@ import { createRemoteJWKSet } from "jose";
 
 // src/jwt.ts
 import {
+  importJWK,
   jwtVerify
 } from "jose";
-function verifyJwt(jwt, key, options) {
+function isJwk(key) {
+  return typeof key === "object" && key !== null && !(key instanceof Uint8Array) && typeof key.kty === "string";
+}
+async function verifyJwt(jwt, key, options) {
   if (typeof key === "function") {
     return jwtVerify(jwt, key, options);
   }
-  return jwtVerify(jwt, key, options);
+  const resolved = isJwk(key) ? await importJWK(key, "EdDSA") : key;
+  return jwtVerify(jwt, resolved, options);
 }
 
 // src/verify-badge.ts
@@ -130,6 +155,9 @@ function remoteJwksFor2(issuer) {
 }
 async function verifyIdTokenPayload(idToken, options) {
   const issuer = options.issuer.replace(/\/$/, "");
+  if (!options.clientId) {
+    throw new MinisterTokenError("clientId (expected audience) is required to verify an id_token");
+  }
   const key = options.key ?? remoteJwksFor2(issuer);
   let payload;
   try {
@@ -138,7 +166,7 @@ async function verifyIdTokenPayload(idToken, options) {
       algorithms: ["EdDSA"],
       requiredClaims: ["exp", "iat"],
       clockTolerance: "30s",
-      ...options.clientId ? { audience: options.clientId } : {}
+      audience: options.clientId
     });
     payload = result.payload;
   } catch (cause) {
@@ -167,12 +195,27 @@ async function verifyMinisterIdToken(idToken, options) {
 
 // src/verify-badges.ts
 async function verifyMinisterBadges(tokenOrPayload, options) {
-  const payload = typeof tokenOrPayload === "string" ? await verifyIdTokenPayload(tokenOrPayload, options) : tokenOrPayload;
+  let payload;
+  if (typeof tokenOrPayload === "string") {
+    if (!options.clientId) {
+      throw new MinisterTokenError("clientId is required to verify a raw id_token string");
+    }
+    payload = await verifyIdTokenPayload(tokenOrPayload, {
+      issuer: options.issuer,
+      clientId: options.clientId,
+      key: options.key
+    });
+  } else {
+    payload = tokenOrPayload;
+  }
   const raw = payload["minister_badges"];
   if (raw === void 0 || raw === null) return { badges: [], rejected: [] };
   if (!Array.isArray(raw)) {
     return { badges: [], rejected: [{ raw: String(raw), error: new VcVerificationError("minister_badges is not an array") }] };
   }
+  const idTokenSub = payload["sub"];
+  const canBind = typeof idTokenSub === "string" && idTokenSub.length > 0;
+  const expectedSubject = canBind ? buildPairwiseSubjectDid(options.issuer, idTokenSub) : void 0;
   const result = { badges: [], rejected: [] };
   for (const entry of raw) {
     if (typeof entry !== "string") {
@@ -180,7 +223,18 @@ async function verifyMinisterBadges(tokenOrPayload, options) {
       continue;
     }
     try {
-      result.badges.push(await verifyMinisterBadge(entry, { issuer: options.issuer, key: options.key }));
+      const badge = await verifyMinisterBadge(entry, { issuer: options.issuer, key: options.key });
+      if (!expectedSubject) {
+        throw new VcVerificationError(
+          "cannot bind badge: id_token has no usable `sub`"
+        );
+      }
+      if (badge.subject !== expectedSubject) {
+        throw new VcVerificationError(
+          "badge subject is not bound to the id_token sub (borrowed or mismatched credential)"
+        );
+      }
+      result.badges.push(badge);
     } catch (cause) {
       result.rejected.push({
         raw: entry,
@@ -194,6 +248,8 @@ async function verifyMinisterBadges(tokenOrPayload, options) {
 export {
   buildDid,
   didFromIssuer,
+  buildPairwiseSubjectDid,
+  parsePairwiseSubjectDid,
   VcVerificationError,
   OidcError,
   MinisterTokenError,
@@ -203,4 +259,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-CSD6YO64.js.map
+//# sourceMappingURL=chunk-65H325O6.js.map

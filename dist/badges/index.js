@@ -19,7 +19,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "../chunk-U2JFQKFV.js";
+} from "../chunk-OY24DUVT.js";
 export {
   AGE_THRESHOLDS,
   AgeOverClaimsFor,

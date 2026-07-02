@@ -1,4 +1,4 @@
-import { KeyLike, JWTVerifyGetKey } from 'jose';
+import { KeyLike, JWK, JWTVerifyGetKey } from 'jose';
 
 declare class VcVerificationError extends Error {
     constructor(message: string);
@@ -51,6 +51,6 @@ interface ExchangeResult {
     badges: VerifiedBadge[];
     rejected: RejectedBadge[];
 }
-type KeyInput = KeyLike | Uint8Array | JWTVerifyGetKey;
+type KeyInput = KeyLike | JWK | Uint8Array | JWTVerifyGetKey;
 
 export { type BadgesResult as B, type ExchangeResult as E, type KeyInput as K, type MinisterClientConfig as M, OidcError as O, type PkcePair as P, type RejectedBadge as R, type VerifiedBadge as V, type MinisterClaims as a, MinisterTokenError as b, type OidcFlowState as c, VcVerificationError as d };

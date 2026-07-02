@@ -102,4 +102,4 @@ export {
   getBadgeClaimSchema,
   knownBadgeTypes
 };
-//# sourceMappingURL=chunk-U2JFQKFV.js.map
+//# sourceMappingURL=chunk-OY24DUVT.js.map

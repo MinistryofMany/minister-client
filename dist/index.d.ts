@@ -1,5 +1,5 @@
-import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, P as PkcePair, M as MinisterClientConfig, a as MinisterClaims, B as BadgesResult } from './types-BHY-mOJf.js';
-export { b as MinisterTokenError, O as OidcError, c as OidcFlowState, R as RejectedBadge, d as VcVerificationError } from './types-BHY-mOJf.js';
+import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, P as PkcePair, M as MinisterClientConfig, a as MinisterClaims, B as BadgesResult } from './types-DF4yfCvg.js';
+export { b as MinisterTokenError, O as OidcError, c as OidcFlowState, R as RejectedBadge, d as VcVerificationError } from './types-DF4yfCvg.js';
 import { JWTPayload } from 'jose';
 export { AGE_THRESHOLDS, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
 import 'zod';
@@ -42,10 +42,15 @@ declare function randomUrlToken(bytes?: number): string;
 
 declare function buildDid(domain: string): string;
 declare function didFromIssuer(issuer: string): string;
+declare function buildPairwiseSubjectDid(issuer: string, sub: string): string;
+declare function parsePairwiseSubjectDid(subject: string): {
+    issuerDid: string;
+    sub: string;
+} | null;
 
 interface MinisterVerifierConfig {
     issuer: string;
-    clientId?: string;
+    clientId: string;
     jwks?: KeyInput;
 }
 interface MinisterVerifier {
@@ -59,7 +64,7 @@ declare function createMinisterVerifier(config: MinisterVerifierConfig): Ministe
 
 interface VerifyIdTokenOptions {
     issuer: string;
-    clientId?: string;
+    clientId: string;
     nonce?: string;
     key?: KeyInput;
 }
@@ -72,4 +77,4 @@ interface VerifyBadgesOptions {
 }
 declare function verifyMinisterBadges(tokenOrPayload: string | JWTPayload, options: VerifyBadgesOptions): Promise<BadgesResult>;
 
-export { BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, createMinisterClient, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };
+export { BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterVerifier, didFromIssuer, generatePkce, parsePairwiseSubjectDid, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };

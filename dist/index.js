@@ -3,13 +3,15 @@ import {
   OidcError,
   VcVerificationError,
   buildDid,
+  buildPairwiseSubjectDid,
   claimsFromPayload,
   didFromIssuer,
+  parsePairwiseSubjectDid,
   verifyIdTokenPayload,
   verifyMinisterBadge,
   verifyMinisterBadges,
   verifyMinisterIdToken
-} from "./chunk-CSD6YO64.js";
+} from "./chunk-65H325O6.js";
 import "./chunk-R4XGCZVA.js";
 import {
   AGE_THRESHOLDS,
@@ -31,7 +33,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "./chunk-U2JFQKFV.js";
+} from "./chunk-OY24DUVT.js";
 
 // src/oidc.ts
 import { createRemoteJWKSet } from "jose";
@@ -215,6 +217,7 @@ export {
   badgeScopes,
   badgeTypeOf,
   buildDid,
+  buildPairwiseSubjectDid,
   createMinisterClient,
   createMinisterVerifier,
   defineBadgeType,
@@ -222,6 +225,7 @@ export {
   generatePkce,
   getBadgeClaimSchema,
   knownBadgeTypes,
+  parsePairwiseSubjectDid,
   randomUrlToken,
   slugForCredentialType,
   verifyMinisterBadge,

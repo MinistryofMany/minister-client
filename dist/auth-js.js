@@ -1,7 +1,7 @@
 import {
   verifyMinisterBadges
-} from "./chunk-CSD6YO64.js";
-import "./chunk-U2JFQKFV.js";
+} from "./chunk-65H325O6.js";
+import "./chunk-OY24DUVT.js";
 
 // src/auth-js.ts
 function ministerProvider(options) {
