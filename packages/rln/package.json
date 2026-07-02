@@ -32,7 +32,7 @@
     "@ethersproject/keccak256": "5.7.0",
     "@ethersproject/strings": "5.7.0",
     "@semaphore-protocol/group": "3.10.1",
-    "ffjavascript": "0.2.60",
+    "ffjavascript": "0.3.1",
     "poseidon-lite": "0.2.0",
     "rlnjs": "3.2.0"
   },
