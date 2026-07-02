@@ -187,8 +187,8 @@ importers:
   packages/rln:
     dependencies:
       '@ethersproject/bytes':
-        specifier: 5.7.0
-        version: 5.7.0
+        specifier: 5.8.0
+        version: 5.8.0
       '@ethersproject/keccak256':
         specifier: 5.7.0
         version: 5.7.0
@@ -551,9 +551,6 @@ packages:
 
   '@ethersproject/bignumber@5.8.0':
     resolution: {integrity: sha512-ZyaT24bHaSeJon2tGPKIiHszWjD/54Sz8t57Toch475lCLljC6MgPmxk7Gtzz+ddNN5LuHea9qhAe0x3D+uYPA==}
-
-  '@ethersproject/bytes@5.7.0':
-    resolution: {integrity: sha512-nsbxwgFXWh9NyYWo+U8atvmMsSdKJprTcICAkvbBffT75qDocbuggBU0SJiVK2MuTrp0q+xvLkTnGMPK1+uA9A==}
 
   '@ethersproject/bytes@5.8.0':
     resolution: {integrity: sha512-vTkeohgJVCPVHu5c25XWaWQOZ4v+DkGoC42/TS2ond+PARCxTJvgTFUNDZovyQ/uAQ4EcpqqowKydcdmRKjg7A==}
@@ -2031,10 +2028,6 @@ snapshots:
       '@ethersproject/logger': 5.8.0
       bn.js: 5.2.4
 
-  '@ethersproject/bytes@5.7.0':
-    dependencies:
-      '@ethersproject/logger': 5.8.0
-
   '@ethersproject/bytes@5.8.0':
     dependencies:
       '@ethersproject/logger': 5.8.0
@@ -2045,7 +2038,7 @@ snapshots:
 
   '@ethersproject/keccak256@5.7.0':
     dependencies:
-      '@ethersproject/bytes': 5.7.0
+      '@ethersproject/bytes': 5.8.0
       js-sha3: 0.8.0
 
   '@ethersproject/keccak256@5.8.0':
@@ -2077,7 +2070,7 @@ snapshots:
 
   '@ethersproject/strings@5.7.0':
     dependencies:
-      '@ethersproject/bytes': 5.7.0
+      '@ethersproject/bytes': 5.8.0
       '@ethersproject/constants': 5.8.0
       '@ethersproject/logger': 5.8.0
 
@@ -2246,7 +2239,7 @@ snapshots:
   '@semaphore-protocol/group@3.10.1':
     dependencies:
       '@ethersproject/bignumber': 5.8.0
-      '@ethersproject/bytes': 5.7.0
+      '@ethersproject/bytes': 5.8.0
       '@ethersproject/keccak256': 5.7.0
       '@zk-kit/incremental-merkle-tree': 1.1.0
 
@@ -2321,6 +2314,14 @@ snapshots:
       '@vitest/utils': 2.1.9
       chai: 5.3.3
       tinyrainbow: 1.2.0
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@20.19.43))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@20.19.43)
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.7.5))':
     dependencies:
@@ -3125,7 +3126,7 @@ snapshots:
 
   rlnjs@3.2.0:
     dependencies:
-      '@ethersproject/bytes': 5.7.0
+      '@ethersproject/bytes': 5.8.0
       '@ethersproject/keccak256': 5.7.0
       '@ethersproject/solidity': 5.8.0
       '@ethersproject/strings': 5.7.0
@@ -3430,7 +3431,7 @@ snapshots:
   vitest@2.1.9(@types/node@20.19.43):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.7.5))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@20.19.43))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
