@@ -20,17 +20,28 @@ import type { TreeRef } from "../types.js";
 // R1 for RLN): a proof's root is pinned to the resolved snapshot even though RLN
 // also binds the root in publicSignals.
 //
-// The depth-20 RLN circuit artifacts are INJECTED. We source them from the
-// Discreetly circuits package (the lifted-from origin); if absent the proof tests
-// skip.
-
-const ARTIFACT_BASE = fileURLToPath(
-  new URL("../../../../../../../../Discreetly/packages/circuits/artifacts/rln/", import.meta.url),
-);
+// The depth-20 RLN circuit artifacts are INJECTED. Resolve them from
+// MOM_RLN_ARTIFACTS_DIR when set, else fall back to the sibling Discreetly
+// circuits package (the lifted-from origin) five levels up from this file (../ =
+// src, membership, packages, minister-client, then the MinistryOfMany workspace
+// root). If absent we WARN and skip the proof tests loudly - never a silent skip.
+const ENV_DIR = process.env.MOM_RLN_ARTIFACTS_DIR;
+const ARTIFACT_BASE = ENV_DIR
+  ? ENV_DIR.endsWith("/")
+    ? ENV_DIR
+    : `${ENV_DIR}/`
+  : fileURLToPath(
+      new URL("../../../../../Discreetly/packages/circuits/artifacts/rln/", import.meta.url),
+    );
 const wasmPath = `${ARTIFACT_BASE}circuit.wasm`;
 const zkeyPath = `${ARTIFACT_BASE}final.zkey`;
 const vkeyPath = `${ARTIFACT_BASE}verification_key.json`;
 const haveArtifacts = existsSync(wasmPath) && existsSync(zkeyPath) && existsSync(vkeyPath);
+if (!haveArtifacts) {
+  console.warn(
+    `SKIPPING e2e: RLN circuit artifacts not found at ${ARTIFACT_BASE} (set MOM_RLN_ARTIFACTS_DIR to override)`,
+  );
+}
 
 function membershipArtifacts(): ArtifactSource {
   return {

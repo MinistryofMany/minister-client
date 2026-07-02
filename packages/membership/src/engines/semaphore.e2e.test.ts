@@ -17,14 +17,21 @@ import type { TreeRef } from "../types.js";
 //   - BANNED-EXCLUSION (control 2): a banned commitment cannot prove against the
 //     refreshed root (requireCurrentRoot).
 //
-// The depth-N Semaphore circuit artifacts are INJECTED, not hard-coded. We source
-// them from FreedInk's vendored static/snark-artifacts (the lifted-from origin);
-// if absent the proof tests skip (the pure-logic controls below still gate the
-// engine via the other suites).
-
-const ARTIFACT_BASE = fileURLToPath(
-  new URL("../../../../../../../../FreedInk/static/snark-artifacts/semaphore/", import.meta.url),
-);
+// The depth-N Semaphore circuit artifacts are INJECTED, not hard-coded. Resolve
+// them from MOM_SEMAPHORE_ARTIFACTS_DIR when set, else fall back to FreedInk's
+// vendored static/snark-artifacts (the lifted-from origin) five levels up from
+// this file (../ = src, membership, packages, minister-client, then the
+// MinistryOfMany workspace root). If absent we WARN and skip the proof tests
+// loudly - never a silent skip; the pure-logic controls below still gate the
+// engine via the other suites.
+const ENV_DIR = process.env.MOM_SEMAPHORE_ARTIFACTS_DIR;
+const ARTIFACT_BASE = ENV_DIR
+  ? ENV_DIR.endsWith("/")
+    ? ENV_DIR
+    : `${ENV_DIR}/`
+  : fileURLToPath(
+      new URL("../../../../../FreedInk/static/snark-artifacts/semaphore/", import.meta.url),
+    );
 
 function artifactPaths(depth: number): { wasm: string; zkey: string } {
   return {
@@ -38,6 +45,11 @@ const haveArtifacts = [1, 2, 3].every((d) => {
   const p = artifactPaths(d);
   return existsSync(p.wasm) && existsSync(p.zkey);
 });
+if (!haveArtifacts) {
+  console.warn(
+    `SKIPPING e2e: Semaphore circuit artifacts (depths 1-3) not found under ${ARTIFACT_BASE} (set MOM_SEMAPHORE_ARTIFACTS_DIR to override)`,
+  );
+}
 
 function fileArtifactSource(): ArtifactSource {
   return {

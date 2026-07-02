@@ -10,20 +10,29 @@ import type { ArtifactSource, RlnVerificationKey } from "./artifacts.js";
 import { generateRlnProof } from "./prover.js";
 import { verifyRlnProof } from "./verifier.js";
 
-// The depth-20 RLN circuit artifacts are INJECTED, not hard-coded. For this test
-// we source them from the Discreetly circuits package (the lifted-from origin).
-// If they are not present (e.g. a checkout without Discreetly), the proof tests
-// skip - the pure-math golden vectors above still gate the island.
-const ARTIFACT_BASE = fileURLToPath(
-  new URL(
-    "../../../../../../../../Discreetly/packages/circuits/artifacts/rln/",
-    import.meta.url,
-  ),
-);
+// The depth-20 RLN circuit artifacts are INJECTED, not hard-coded. Resolve them
+// from MOM_RLN_ARTIFACTS_DIR when set, else fall back to the sibling Discreetly
+// circuits package (the lifted-from origin) five levels up from this file (../ =
+// src, rln, packages, minister-client, then the MinistryOfMany workspace root).
+// If they are genuinely absent we WARN and skip the proof tests loudly - never a
+// silent skip. The pure-math golden vectors above still gate the island.
+const ENV_DIR = process.env.MOM_RLN_ARTIFACTS_DIR;
+const ARTIFACT_BASE = ENV_DIR
+  ? ENV_DIR.endsWith("/")
+    ? ENV_DIR
+    : `${ENV_DIR}/`
+  : fileURLToPath(
+      new URL("../../../../../Discreetly/packages/circuits/artifacts/rln/", import.meta.url),
+    );
 const wasmPath = `${ARTIFACT_BASE}circuit.wasm`;
 const zkeyPath = `${ARTIFACT_BASE}final.zkey`;
 const vkeyPath = `${ARTIFACT_BASE}verification_key.json`;
 const haveArtifacts = existsSync(wasmPath) && existsSync(zkeyPath) && existsSync(vkeyPath);
+if (!haveArtifacts) {
+  console.warn(
+    `SKIPPING e2e: RLN circuit artifacts not found at ${ARTIFACT_BASE} (set MOM_RLN_ARTIFACTS_DIR to override)`,
+  );
+}
 
 function artifactSource(): ArtifactSource {
   const verificationKey = JSON.parse(readFileSync(vkeyPath, "utf8")) as RlnVerificationKey;

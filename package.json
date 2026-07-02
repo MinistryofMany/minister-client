@@ -31,6 +31,9 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
+    "typecheck:tests": "pnpm -r --if-present typecheck:tests",
+    "check:links": "node scripts/check-workspace-links.mjs",
+    "pretest": "node scripts/check-workspace-links.mjs",
     "test": "vitest run"
   },
   "dependencies": {

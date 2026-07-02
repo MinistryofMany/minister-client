@@ -1,0 +1,46 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    name: build / typecheck / test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.12.0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Hard pretest: fail loudly if any @ministryofmany/* workspace dep is not
+      # linked. Without this a package's unresolved import silently collects zero
+      # tests and the run still passes green.
+      - name: Workspace link check
+        run: pnpm run check:links
+
+      # The build/publish tsconfig excludes *.test.ts; this pass type-checks the
+      # test files so the v3/v4 brand @ts-expect-error assertions are enforced.
+      - name: Type-check tests
+        run: pnpm run typecheck:tests
+
+      - name: Type-check (build surface)
+        run: pnpm -r --if-present typecheck
+
+      # `pretest` re-runs the link check; passWithNoTests:false makes an empty
+      # collection a failure. Real ZK e2e suites (packages/rln, packages/membership)
+      # loudly warn-and-skip here because the sibling Discreetly/FreedInk artifact
+      # checkouts are not present in this repo's CI; they run in a checkout that has
+      # them (or via MOM_RLN_ARTIFACTS_DIR / MOM_SEMAPHORE_ARTIFACTS_DIR).
+      - name: Test
+        run: pnpm test
