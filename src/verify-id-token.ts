@@ -16,8 +16,11 @@ function remoteJwksFor(issuer: string) {
 
 export interface VerifyIdTokenOptions {
   issuer: string;
-  // When set, the id_token `aud` must equal it. Omit only to skip audience enforcement.
-  clientId?: string;
+  // REQUIRED (fail-closed audience): the id_token `aud` must equal it. A
+  // verifier built without a clientId would silently accept a token minted for
+  // another relying party (cross-RP impersonation), so this is not optional and
+  // is also enforced at runtime.
+  clientId: string;
   // Replay nonce; when set, must equal the id_token `nonce`.
   nonce?: string;
   // Inject the verification key (defaults to the remote JWKS).
@@ -28,6 +31,11 @@ export interface VerifyIdTokenOptions {
 // need minister_badges use this; verifyMinisterIdToken maps to claims).
 export async function verifyIdTokenPayload(idToken: string, options: VerifyIdTokenOptions): Promise<JWTPayload> {
   const issuer = options.issuer.replace(/\/$/, "");
+  // Fail closed: never verify an id_token without an expected audience. A JS
+  // caller can defeat the required-type at runtime, so guard here too.
+  if (!options.clientId) {
+    throw new MinisterTokenError("clientId (expected audience) is required to verify an id_token");
+  }
   const key = options.key ?? remoteJwksFor(issuer);
   let payload: JWTPayload;
   try {
@@ -36,7 +44,7 @@ export async function verifyIdTokenPayload(idToken: string, options: VerifyIdTok
       algorithms: ["EdDSA"],
       requiredClaims: ["exp", "iat"],
       clockTolerance: "30s",
-      ...(options.clientId ? { audience: options.clientId } : {}),
+      audience: options.clientId,
     });
     payload = result.payload;
   } catch (cause) {

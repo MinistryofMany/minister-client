@@ -1,4 +1,4 @@
-import type { JWTVerifyGetKey, KeyLike } from "jose";
+import type { JWK, JWTVerifyGetKey, KeyLike } from "jose";
 import type { VcVerificationError } from "./errors";
 
 // Configuration for a Minister relying-party client.
@@ -54,14 +54,20 @@ export interface VerifiedBadge {
   // The credentialSubject claims, validated against the badge's schema
   // (the `id` field is surfaced as `subject`).
   claims: Record<string, unknown>;
-  // The holder's per-RP PAIRWISE Minister DID (did:web:<domain>:u:<sub>),
+  // The holder's per-RP PAIRWISE Minister DID: `did:web:<domain>:u:<sub>`,
   // taken from the VC and asserted equal to the VC's own JWT `sub`. Minister
-  // re-mints each badge at disclosure under the same pairwise pseudonym it
-  // uses for the id_token `sub`, so this subject is opaque, carries no raw
-  // internal user id, and differs across relying parties (no cross-RP
-  // correlation). The DID's `<sub>` component equals the id_token `sub`, so a
-  // verifier MAY bind a badge to the login by comparing them; this SDK does
-  // not do that comparison automatically.
+  // re-mints each badge at DISCLOSURE time under the same pairwise pseudonym it
+  // stamps as the id_token `sub`, so this subject is opaque, carries no raw
+  // internal user id, and DIFFERS across relying parties (two colluding RPs
+  // cannot correlate the same user via their badges).
+  //
+  // The DID's trailing `<sub>` component equals the id_token `sub`. The wrapper
+  // (`verifyMinisterBadges` / `exchangeCode` / `ministerBadgesFromProfile`)
+  // binds each badge to the login automatically by requiring
+  // `subject === did:web:<host>:u:<id_token sub>`; a borrowed badge (another
+  // user's, presented alongside your login) lands in `rejected`. Standalone
+  // `verifyMinisterBadge` does NOT bind (it has no id_token) — it only checks
+  // the VC-internal `credentialSubject.id === sub` self-consistency.
   subject: string;
   // The original VC JWT, for storage or forwarding.
   raw: string;
@@ -93,8 +99,10 @@ export interface ExchangeResult {
   rejected: RejectedBadge[];
 }
 
-// A key source for JWT verification. Either a single resolved key (e.g.
-// a public key in a test) or a jose key resolver (e.g. a remote JWKS).
-// Injectable so tests verify without network access; the default is a
-// remote JWKS fetched from Minister.
-export type KeyInput = KeyLike | Uint8Array | JWTVerifyGetKey;
+// A key source for JWT verification. Either a single resolved key — a
+// `KeyLike`, a raw `JWK`, or a symmetric `Uint8Array` — or a jose key resolver
+// (e.g. a remote JWKS). A bare `JWK` is accepted so an RP (or a test) can hand
+// over Minister's public key without importing it first; the SDK imports it
+// internally (pinned to EdDSA). Injectable so tests verify without network
+// access; the default is a remote JWKS fetched from Minister.
+export type KeyInput = KeyLike | JWK | Uint8Array | JWTVerifyGetKey;

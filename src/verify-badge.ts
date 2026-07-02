@@ -33,13 +33,21 @@ export interface VerifyBadgeOptions {
   key?: KeyInput;
 }
 
-// Verify a received VC JWT.
+// Verify a received VC JWT (standalone).
 //
-// Beyond `@ministryofmany/vc`'s structural checks, this ALSO asserts
-// `credentialSubject.id === payload.sub` — the holder-binding invariant
-// `@ministryofmany/vc` does not currently enforce. Without it, a VC's claims
-// could be presented as bound to a subject other than the one the
-// issuer signed them for.
+// Beyond `@ministryofmany/vc`'s structural checks, this asserts the VC-INTERNAL
+// invariant `credentialSubject.id === payload.sub` — that the claims are bound
+// to the subject the issuer signed them for. It does NOT (and cannot) bind the
+// badge to any LOGIN: there is no id_token here, so nothing ties this VC to the
+// user in front of you. A valid Minister badge belonging to some OTHER user
+// (e.g. one received via a share link) verifies successfully. Treating a
+// standalone `verifyMinisterBadge` success as "the current user holds this
+// badge" is an authorization bug.
+//
+// The holder-to-login binding lives in the wrapper (`verifyMinisterBadges`),
+// which requires `subject === did:web:<host>:u:<id_token sub>`. Use the wrapper
+// for any access decision; use this only to certify issuance of an out-of-band
+// VC.
 export async function verifyMinisterBadge(
   vcJwt: string,
   options: VerifyBadgeOptions,

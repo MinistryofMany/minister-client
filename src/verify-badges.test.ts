@@ -6,7 +6,9 @@ import { MinisterTokenError } from "./errors";
 
 const ISSUER = "https://ministry.test";
 const DID = "did:web:ministry.test";
-const SUB = "did:web:ministry.test:users:u1";
+const PAIRWISE = "pairwise";
+// The disclosed badge subject binds to the id_token sub ("pairwise").
+const SUB = `${DID}:u:${PAIRWISE}`;
 const CLIENT = "client-1";
 
 async function setup() {
@@ -19,7 +21,7 @@ async function setup() {
   const signId = (over: Record<string, unknown> = {}) =>
     new SignJWT(over)
       .setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
-      .setIssuer(ISSUER).setSubject("pairwise").setAudience(CLIENT).setIssuedAt().setExpirationTime("5m").sign(privateKey);
+      .setIssuer(ISSUER).setSubject(PAIRWISE).setAudience(CLIENT).setIssuedAt().setExpirationTime("5m").sign(privateKey);
   return { publicJwk, signVc, signId };
 }
 
@@ -28,7 +30,7 @@ describe("verifyMinisterBadges", () => {
     const { publicJwk, signVc } = await setup();
     const good = await signVc({ domain: "a.com" }, "MinisterEmailDomainCredential");
     const bad = await signVc({ domain: "not-a-domain" }, "MinisterEmailDomainCredential");
-    const payload = { sub: SUB, minister_badges: [good, bad] };
+    const payload = { sub: PAIRWISE, minister_badges: [good, bad] };
     const result = await verifyMinisterBadges(payload, { issuer: ISSUER, key: publicJwk });
     expect(result.badges.map((b) => b.type)).toEqual(["email-domain"]);
     expect(result.rejected).toHaveLength(1);

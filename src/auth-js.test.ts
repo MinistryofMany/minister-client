@@ -5,7 +5,9 @@ import { ministerProvider, ministerBadgesFromProfile } from "./auth-js";
 
 const ISSUER = "https://ministry.test";
 const DID = "did:web:ministry.test";
-const SUB = "did:web:ministry.test:users:u1";
+const PAIRWISE = "pairwise-u1";
+// The disclosed badge subject binds to the profile (id_token) sub.
+const SUB = `${DID}:u:${PAIRWISE}`;
 
 describe("auth-js adapter", () => {
   it("ministerProvider returns an oidc provider config with the requested scopes", () => {
@@ -25,7 +27,7 @@ describe("auth-js adapter", () => {
     const publicJwk = await exportJWK(publicKey);
     const vc = await new SignJWT({ vc: { type: ["VerifiableCredential", "MinisterEmailDomainCredential"], credentialSubject: { id: SUB, domain: "a.com" } } })
       .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt" }).setIssuer(DID).setSubject(SUB).setIssuedAt().setExpirationTime("1y").sign(privateKey);
-    const profile = { sub: SUB, minister_badges: [vc] };
+    const profile = { sub: PAIRWISE, minister_badges: [vc] };
     const { badges } = await ministerBadgesFromProfile(profile, { issuer: ISSUER, key: publicJwk });
     expect(badges.map((b) => b.type)).toEqual(["email-domain"]);
   });

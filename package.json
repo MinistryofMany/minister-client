@@ -31,7 +31,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "typecheck:tests": "pnpm -r --if-present typecheck:tests",
+    "typecheck:tests": "tsc --noEmit -p tsconfig.test.json && pnpm -r --if-present typecheck:tests",
     "check:links": "node scripts/check-workspace-links.mjs",
     "pretest": "node scripts/check-workspace-links.mjs",
     "test": "vitest run"

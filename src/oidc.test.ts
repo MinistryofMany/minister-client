@@ -187,7 +187,9 @@ describe("OidcCore.exchangeCode", () => {
     const badgeJwt = await signVc({
       privateKey: keys.privateKey,
       issuerDid: ISSUER_DID,
-      subject: "did:web:ministry.id:users:alice",
+      // Bound to the id_token sub (signIdToken defaults sub to
+      // "pairwise-subject-123"): did:web:<host>:u:<sub>.
+      subject: "did:web:ministry.id:u:pairwise-subject-123",
       type: ["VerifiableCredential", "MinisterAgeOver21Credential"],
       claims: { threshold: 21 },
     });

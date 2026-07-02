@@ -7,7 +7,10 @@ import { MinisterTokenError } from "./errors";
 const ISSUER = "https://ministry.test";
 const DID = "did:web:ministry.test";
 const CLIENT = "client-1";
-const SUB = "did:web:ministry.test:users:u1";
+const PAIRWISE = "pairwise";
+// Post-MIN-1 the disclosed badge subject is the per-RP pairwise DID whose
+// trailing component equals the id_token sub ("pairwise").
+const SUB = `${DID}:u:${PAIRWISE}`;
 
 async function setup() {
   const { privateKey, publicKey } = await generateKeyPair("EdDSA");
@@ -18,7 +21,7 @@ async function setup() {
       .setIssuedAt().setExpirationTime("1y").sign(privateKey);
   const signId = (over: Record<string, unknown> = {}) =>
     new SignJWT(over).setProtectedHeader({ alg: "EdDSA", typ: "JWT" })
-      .setIssuer(ISSUER).setSubject("pairwise").setAudience(CLIENT).setIssuedAt().setExpirationTime("5m").sign(privateKey);
+      .setIssuer(ISSUER).setSubject(PAIRWISE).setAudience(CLIENT).setIssuedAt().setExpirationTime("5m").sign(privateKey);
   return { publicJwk, signVc, signId };
 }
 

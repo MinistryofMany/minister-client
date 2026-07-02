@@ -45,6 +45,24 @@ describe("verifyMinisterIdToken", () => {
     await expect(verifyMinisterIdToken(await signId({ aud: "other" }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk }))
       .rejects.toBeInstanceOf(MinisterTokenError);
   });
+  it("fails closed: an empty clientId throws instead of skipping the audience check", async () => {
+    // Finding #5: a verifier built without an expected audience must NOT
+    // silently accept a token minted for another RP. Even a valid token for
+    // CLIENT is refused when no audience is provided.
+    const { publicJwk, signId } = await setup();
+    await expect(
+      verifyMinisterIdToken(await signId(), { issuer: ISSUER, clientId: "", key: publicJwk }),
+    ).rejects.toBeInstanceOf(MinisterTokenError);
+  });
+  it("fails closed: a token for another RP is rejected rather than accepted audience-free", async () => {
+    // The cross-RP impersonation the old fail-open path allowed: RP-A's token
+    // replayed to RP-B. With clientId now mandatory, it is rejected.
+    const { publicJwk, signId } = await setup();
+    const tokenForOtherRp = await signId({ aud: "rp-a" });
+    await expect(
+      verifyMinisterIdToken(tokenForOtherRp, { issuer: ISSUER, clientId: "rp-b", key: publicJwk }),
+    ).rejects.toBeInstanceOf(MinisterTokenError);
+  });
   it("rejects a wrong nonce", async () => {
     const { publicJwk, signId } = await setup();
     await expect(verifyMinisterIdToken(await signId({ over: { nonce: "a" } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk, nonce: "b" }))

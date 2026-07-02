@@ -7,10 +7,12 @@ import type { KeyInput, MinisterClaims, VerifiedBadge, BadgesResult } from "./ty
 export interface MinisterVerifierConfig {
   // Minister origin, e.g. "https://ministry.id".
   issuer: string;
-  // When set, id_token `aud` is checked against it. Recommended.
-  clientId?: string;
+  // REQUIRED (fail-closed audience): id_token `aud` is checked against it. A
+  // verifier without a clientId would silently accept a token minted for
+  // another RP, so this is mandatory — not merely recommended.
+  clientId: string;
   // Inject the verification key. When omitted, each verifier fetches
-  // Minister's remote JWKS on demand. Accepts a single public key too;
+  // Minister's remote JWKS on demand. Accepts a single public JWK too;
   // pass a public JWK in tests so verification stays offline.
   jwks?: KeyInput;
 }
