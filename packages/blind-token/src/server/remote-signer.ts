@@ -41,11 +41,19 @@ export interface RemoteSignerConfig {
   // sets its own, and the deployed Signet binary must agree on these bytes.
   infoPrefix?: string;
   requestTimeoutMs?: number; // default 15000 (matches signet.ts)
+  // How long a READY public key stays cached in-process before it is re-fetched.
+  // Bounds staleness after an OUT-OF-BAND key rotation (an admin rotating a
+  // group's key via a separate client): without a TTL this instance would blind
+  // preflights under the retired key until process restart, and every signature
+  // would then fail closed at redemption. Default 5 minutes; set 0 to disable
+  // caching entirely.
+  pubKeyCacheTtlMs?: number;
   logger?: TokenLogger;
 }
 
 const DEFAULT_INFO_PREFIX = "freedink-vote";
 const DEFAULT_TIMEOUT_MS = 15_000;
+const DEFAULT_PUBKEY_CACHE_TTL_MS = 300_000; // 5 minutes
 
 interface ResolvedConfig {
   baseUrl: string;
@@ -54,6 +62,7 @@ interface ResolvedConfig {
   caCert: string;
   infoPrefix: string;
   requestTimeoutMs: number;
+  pubKeyCacheTtlMs: number;
   logger: TokenLogger;
 }
 
@@ -73,10 +82,13 @@ class RemoteSigner implements Signer {
   private agent: Agent | null = null;
 
   // Small in-process cache of READY public keys (SPKI). The Signet public key is
-  // stable per group, so once it's ready we don't re-fetch it on every preflight
-  // or redemption. Pending keys are never cached. NOT a persistence layer; a
-  // restart simply rebuilds it from GET /key. (Lifts pubKeyCache.)
-  private readonly pubKeyCache = new Map<string, Uint8Array>();
+  // stable per group, so within a bounded TTL we don't re-fetch it on every
+  // preflight or redemption. Pending keys are never cached. Each entry carries
+  // the fetch time so an OUT-OF-BAND rotation (admin rotates via a separate
+  // client) can only pin a stale key for at most `pubKeyCacheTtlMs`, not until
+  // process restart. NOT a persistence layer; a restart rebuilds it from GET
+  // /key. (Lifts pubKeyCache, with the L2 staleness bound added.)
+  private readonly pubKeyCache = new Map<string, { spki: Uint8Array; fetchedAt: number }>();
 
   // Groups for which we have already issued a POST /key from a read/sign path in
   // this process. Signet dedups concurrent generations per group, but RE-issuing
@@ -92,6 +104,7 @@ class RemoteSigner implements Signer {
       caCert: cfg.caCert,
       infoPrefix: cfg.infoPrefix ?? DEFAULT_INFO_PREFIX,
       requestTimeoutMs: cfg.requestTimeoutMs ?? DEFAULT_TIMEOUT_MS,
+      pubKeyCacheTtlMs: cfg.pubKeyCacheTtlMs ?? DEFAULT_PUBKEY_CACHE_TTL_MS,
       logger: cfg.logger ?? noopLogger,
     };
   }
@@ -178,7 +191,9 @@ class RemoteSigner implements Signer {
   // as a key still generating. Lifts signetGetKey + getPublicKey memo/enqueue.
   async getPublicKey(group: string): Promise<PublicKeyOutcome> {
     const cached = this.pubKeyCache.get(group);
-    if (cached) return { status: "ready", publicKeySpki: cached };
+    if (cached && Date.now() - cached.fetchedAt < this.cfg.pubKeyCacheTtlMs) {
+      return { status: "ready", publicKeySpki: cached.spki };
+    }
     const res = await this.request(
       "GET",
       `/key?group_id=${encodeURIComponent(group)}`,
@@ -189,7 +204,7 @@ class RemoteSigner implements Signer {
         throw new Error("Signet /key returned 200 without a public_key");
       }
       const spki = b64ToBytes(j.public_key);
-      this.pubKeyCache.set(group, spki);
+      this.pubKeyCache.set(group, { spki, fetchedAt: Date.now() });
       return { status: "ready", publicKeySpki: spki };
     }
     if (res.status === 202 || res.status === 429) {
@@ -248,8 +263,19 @@ class RemoteSigner implements Signer {
       return { status: "pending" };
     }
     if (res.status === 429) return { status: "rate_limited" };
-    // 400 (bad blinded message), 409 (already signed for this tuple), etc. are real
-    // errors the caller must surface, not retry.
+    if (res.status === 409) {
+      // Signet's ledger already holds this (group, participant, version_id) tuple;
+      // it enforces the one-per-tuple cap independently of this issuer's local
+      // store. This arises after a lost /sign response, or a second issuer instance
+      // with a separate local store. Signet never stored the blind signature, so it
+      // CANNOT be reproduced (a re-sign hits the UNIQUE index and 409s again): the
+      // post-commit window is NON-RECOVERABLE for that one token. Surface it as a
+      // coherent TERMINAL outcome so the Issuer stops retrying, instead of an opaque
+      // throw that loops in signer_error. Recovery is out-of-band (admin delete of
+      // the Signet row, or a key rotation).
+      return { status: "already_issued" };
+    }
+    // 400 (bad blinded message) and any other status are real errors to surface.
     throw new Error(`Signet /sign failed (${res.status}): ${res.text.slice(0, 200)}`);
   }
 
@@ -267,7 +293,7 @@ class RemoteSigner implements Signer {
       if (res.status === 200) {
         const j = res.json as { public_key?: string };
         if (j && typeof j.public_key === "string") {
-          this.pubKeyCache.set(group, b64ToBytes(j.public_key));
+          this.pubKeyCache.set(group, { spki: b64ToBytes(j.public_key), fetchedAt: Date.now() });
         }
         return;
       }
@@ -300,7 +326,7 @@ class RemoteSigner implements Signer {
         throw new Error("Signet /key/rotate returned 200 without a public_key");
       }
       const spki = b64ToBytes(j.public_key);
-      this.pubKeyCache.set(group, spki);
+      this.pubKeyCache.set(group, { spki, fetchedAt: Date.now() });
       return { status: "rotated", publicKeySpki: spki };
     }
     if (res.status === 429) {

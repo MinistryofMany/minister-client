@@ -48,14 +48,26 @@ export interface TokenScope {
   actionKey: string;
 }
 
-// Discriminated sign outcomes - identical semantics to FreedInk's SignOutcome,
-// renamed app-neutrally. `pending` = the issuer key is still being generated
-// (Signet keygen); `rate_limited` = Signet's per-participant / global ceiling
-// fired. Both are first-class outcomes, NOT errors.
+// Discriminated sign outcomes. `pending` = the issuer key is still being
+// generated (Signet keygen); `rate_limited` = Signet's per-participant / global
+// ceiling fired. Both are first-class outcomes, NOT errors.
+//
+// `already_issued` = the SIGNER's own ledger already holds this
+// (group, participant, actionKey) tuple. Only REMOTE mode produces it: Signet
+// independently enforces the one-per-tuple cap, so a lost /sign response or a
+// second issuer instance can leave Signet holding a committed row this issuer
+// cannot reproduce (Signet never stored the blind signature; a re-sign hits its
+// UNIQUE index and 409s again). The RemoteSigner surfaces the 409 as this
+// coherent TERMINAL outcome so the Issuer stops retrying rather than looping in
+// an opaque error. That post-commit window is NON-RECOVERABLE for the affected
+// token: recovery is out-of-band (an admin delete of the Signet row, or a key
+// rotation). Local mode never emits it - the Issuer's IssuanceStore is the only
+// ledger there.
 export type SignOutcome =
   | { status: "ok"; blindSignature: Uint8Array }
   | { status: "pending" }
-  | { status: "rate_limited" };
+  | { status: "rate_limited" }
+  | { status: "already_issued" };
 
 // Discriminated public-key outcomes - lifts FreedInk's PublicKeyOutcome. Remote
 // mode may return `pending` while keygen runs.

@@ -11,7 +11,8 @@
 // centralizes this so no consumer re-implements it.
 
 import type { Signer } from "./signer.js";
-import type { IssuanceStore } from "./store.js";
+import type { IssuanceStore, TokenLogger } from "./store.js";
+import { noopLogger } from "./store.js";
 import type {
   ActionInfo,
   PublicKeyOutcome,
@@ -60,17 +61,23 @@ export interface IssuerOpts {
   // Whether issue() returns the public key alongside a successful blind signature
   // (FreedInk does, to save a client round-trip). Default true.
   includePublicKeyOnIssue?: boolean;
+  // Best-effort structured logger. Used only to surface a post-sign public-key
+  // fetch failure (which is swallowed on purpose so it can never burn a token).
+  // Never receives request/response bodies. Default no-op.
+  logger?: TokenLogger;
 }
 
 class IssuerImpl implements Issuer {
   private readonly signer: Signer;
   private readonly store: IssuanceStore;
   private readonly includePublicKey: boolean;
+  private readonly logger: TokenLogger;
 
   constructor(opts: IssuerOpts) {
     this.signer = opts.signer;
     this.store = opts.issuanceStore;
     this.includePublicKey = opts.includePublicKeyOnIssue ?? true;
+    this.logger = opts.logger ?? noopLogger;
   }
 
   async issue(args: {
@@ -122,14 +129,40 @@ class IssuerImpl implements Issuer {
       return { status: "rate_limited" };
     }
 
+    if (outcome.status === "already_issued") {
+      // The SIGNER's own ledger (Signet) already holds this tuple - a 409. This
+      // is a TERMINAL, NON-RECOVERABLE state for this token: Signet committed the
+      // tuple on a prior attempt (a lost /sign response, or a second issuer
+      // instance with a separate local store) but never stored the blind
+      // signature, so it cannot be reproduced. We do NOT release the local
+      // reservation: keeping it aligns this issuer's ledger with Signet's, so
+      // retries short-circuit at reserve() (already_issued) instead of hammering
+      // Signet with more 409s. Recovery is out-of-band (admin delete of the
+      // Signet row, or a key rotation).
+      return { status: "already_issued" };
+    }
+
     // 3. Success. Do NOT release. Optionally fetch the public key for the response
     //    (FreedInk does, to save a client round-trip). A pending pubkey here is
     //    extremely unlikely (we just signed), so we just omit it and let the client
     //    re-fetch via the preflight - we NEVER roll back a successful sign.
     let publicKeySpki: PublicKeySpki | undefined;
     if (this.includePublicKey) {
-      const pk = await this.signer.getPublicKey(args.group);
-      if (pk.status === "ready") publicKeySpki = pk.publicKeySpki;
+      try {
+        const pk = await this.signer.getPublicKey(args.group);
+        if (pk.status === "ready") publicKeySpki = pk.publicKeySpki;
+      } catch (error) {
+        // The blind signature is ALREADY computed and the reservation is (rightly)
+        // kept. The public key is best-effort convenience - the client can
+        // re-fetch it via the preflight - so a transport blip here must NEVER
+        // throw out of issue() and discard the signature (which would burn the
+        // participant's single token: retry -> already_issued). Omit the key, log,
+        // and still return the issued signature. Mirrors the pending-key path.
+        this.logger.warn(
+          { group: args.group, error },
+          "issuer: public-key fetch failed after a successful sign; returning the signature without it",
+        );
+      }
     }
     return { status: "issued", blindSignature: outcome.blindSignature, publicKeySpki };
   }

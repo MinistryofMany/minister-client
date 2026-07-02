@@ -151,6 +151,67 @@ describe("Issuer rollback-on-failure (single token never burned)", () => {
   });
 });
 
+describe("Issuer never loses an already-computed signature (public key is best-effort)", () => {
+  // Finding #8 / M1: after a SUCCESSFUL sign the reservation is (correctly) kept.
+  // A transport blip on the follow-up getPublicKey must NOT throw out of issue()
+  // and discard the blind signature - that would burn the participant's single
+  // token (retry -> already_issued) with no recovery.
+  it("returns the signature (pubkey omitted) when getPublicKey throws after a successful sign", async () => {
+    const store = new MemoryIssuanceStore();
+    const signer: Signer = {
+      backend: "remote",
+      async getPublicKey(): Promise<PublicKeyOutcome> {
+        throw new Error("transport blip fetching /key");
+      },
+      async sign(): Promise<SignOutcome> {
+        return { status: "ok", blindSignature: new Uint8Array([42]) };
+      },
+      async ensureKey(): Promise<void> {},
+      async rotateKey(): Promise<RotateOutcome> {
+        return { status: "rotated", publicKeySpki: new Uint8Array([1]) };
+      },
+    };
+    // includePublicKeyOnIssue defaults true, so the throwing getPublicKey is hit.
+    const issuer = createIssuer({ signer, issuanceStore: store });
+
+    const r = await issuer.issue(baseArgs);
+    expect(r.status).toBe("issued");
+    if (r.status === "issued") {
+      // The signature survived the pubkey fetch failure.
+      expect(Array.from(r.blindSignature)).toEqual([42]);
+      // The public key is omitted (the client re-fetches via the preflight).
+      expect(r.publicKeySpki).toBeUndefined();
+    }
+    // A successful sign is NEVER rolled back.
+    expect(store.releaseCalls).toBe(0);
+    expect(store.has({ group: "g1", participant: "p1", actionKey: "action-1" })).toBe(true);
+    // The token was ISSUED, not burned: a retry is refused (not re-signed).
+    expect((await issuer.issue(baseArgs)).status).toBe("already_issued");
+  });
+});
+
+describe("Issuer maps a signer already_issued to a coherent terminal state", () => {
+  // Finding #8 / M2: a Signet 409 (its ledger already holds the tuple) must be a
+  // coherent TERMINAL already_issued, and the local reservation is KEPT so the
+  // ledgers align and retries short-circuit locally instead of re-hitting Signet.
+  it("returns already_issued and does NOT release when the signer reports already_issued", async () => {
+    const store = new MemoryIssuanceStore();
+    const signer = new MockSigner(async () => ({ status: "already_issued" }));
+    const issuer = createIssuer({ signer, issuanceStore: store });
+
+    const r = await issuer.issue(baseArgs);
+    expect(r.status).toBe("already_issued");
+    // Reservation kept (aligns the local ledger with Signet's committed row).
+    expect(store.releaseCalls).toBe(0);
+    expect(store.has({ group: "g1", participant: "p1", actionKey: "action-1" })).toBe(true);
+
+    // A retry short-circuits at the local reserve() - the signer is not called again.
+    const retry = await issuer.issue(baseArgs);
+    expect(retry.status).toBe("already_issued");
+    expect(signer.signCalls).toHaveLength(1);
+  });
+});
+
 describe("Issuer omits the public key when configured", () => {
   it("includePublicKeyOnIssue=false skips the getPublicKey round-trip", async () => {
     const store = new MemoryIssuanceStore();
