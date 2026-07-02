@@ -23,6 +23,15 @@ jobs:
 
       - run: pnpm install --frozen-lockfile
 
+      # Build every workspace project (root @ministryofmany/client + packages/*)
+      # BEFORE any typecheck. The packages' dist/ is gitignored and built on
+      # demand, so a fresh CI checkout has no dist/; without this, tsc resolves
+      # sibling deps like @ministryofmany/policy against their `types` (dist/*.d.ts)
+      # and fails with TS2307. `-r` runs in topological order; --include-workspace-root
+      # also builds the root package (which packages/minister-verify imports).
+      - name: Build workspace packages
+        run: pnpm -r --include-workspace-root build
+
       # Hard pretest: fail loudly if any @ministryofmany/* workspace dep is not
       # linked. Without this a package's unresolved import silently collects zero
       # tests and the run still passes green.

@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # pnpm workspace at the repo root (pnpm-lock.yaml + pnpm-workspace.yaml).
+  # Dependabot must resolve the whole workspace (packages/*) from the root
+  # manifest. Scoping npm to "/" stops security updates from targeting a
+  # package subdirectory (e.g. /packages/rln), which fails with
+  # "Updating workspaces from inside a workspace subdirectory is not supported.
+  #  Both pnpm-lock.yaml and pnpm-workspace.yaml exist in a parent directory.
+  #  Dependabot should only update from the root workspace."
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # Keep the CI Actions current.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
