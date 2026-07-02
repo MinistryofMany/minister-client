@@ -130,8 +130,8 @@ importers:
   packages/nullifier:
     dependencies:
       poseidon-lite:
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.3.0
+        version: 0.3.0
     devDependencies:
       tsup:
         specifier: ^8.3.5
@@ -202,8 +202,8 @@ importers:
         specifier: 0.2.60
         version: 0.2.60
       poseidon-lite:
-        specifier: 0.2.0
-        version: 0.2.0
+        specifier: 0.3.0
+        version: 0.3.0
       rlnjs:
         specifier: 3.2.0
         version: 3.2.0
@@ -1477,9 +1477,6 @@ packages:
   poseidon-lite@0.0.2:
     resolution: {integrity: sha512-bGdDPTOQkJbBjbtSEWc3gY+YhqlGTxGlZ8041F8TGGg5QyGGp1Cfs4b8AEnFFjHbkPg6WdWXUgEjU1GKOKWAPw==}
 
-  poseidon-lite@0.2.0:
-    resolution: {integrity: sha512-vivDZnGmz8W4G/GzVA72PXkfYStjilu83rjjUfpL4PueKcC8nfX6hCPh2XhoC5FBgC6y0TA3YuUeUo5YCcNoig==}
-
   poseidon-lite@0.3.0:
     resolution: {integrity: sha512-ilJj4MIve4uBEG7SrtPqUUNkvpJ/pLVbndxa0WvebcQqeIhe+h72JR4g0EvwchUzm9sOQDlOjiDNmRAgxNZl4A==}
 
@@ -2322,6 +2319,14 @@ snapshots:
       chai: 5.3.3
       tinyrainbow: 1.2.0
 
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@20.19.43))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@20.19.43)
+
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.7.5))':
     dependencies:
       '@vitest/spy': 2.1.9
@@ -3068,8 +3073,6 @@ snapshots:
 
   poseidon-lite@0.0.2: {}
 
-  poseidon-lite@0.2.0: {}
-
   poseidon-lite@0.3.0: {}
 
   possible-typed-array-names@1.1.0: {}
@@ -3430,7 +3433,7 @@ snapshots:
   vitest@2.1.9(@types/node@20.19.43):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.7.5))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@20.19.43))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
