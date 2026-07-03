@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
-import { generateKeyPair, exportJWK, SignJWT } from "jose";
-import { verifyMinisterBadge } from "./verify-badge";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import { generateKeyPair, exportJWK, SignJWT, type KeyLike } from "jose";
+import { verifyMinisterBadge, _resetBadgeKeyCache } from "./verify-badge";
 import { VcVerificationError } from "./errors";
 
 const ISSUER = "https://ministry.test";
@@ -169,5 +169,95 @@ describe("verifyMinisterBadge", () => {
         verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
       ).rejects.toBeInstanceOf(VcVerificationError);
     }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// KMS split (H1): badge keys are pinned to the DID document `assertionMethod`,
+// NOT the raw JWKS. Minister's JWKS serves BOTH the badge key (#key-2) and the
+// in-process token key (#key-3); a badge carrying `kid ...#key-3` would verify
+// against the token key if we trusted the JWKS. did.json's assertionMethod lists
+// ONLY #key-2, so a #key-3 VC (a forgery with a stolen token key) must be
+// rejected on the `kid` alone — before any signature helps an attacker.
+// ---------------------------------------------------------------------------
+describe("verifyMinisterBadge — DID assertionMethod pinning", () => {
+  const KEY2 = `${DID}#key-2`;
+  const KEY3 = `${DID}#key-3`;
+
+  async function setup() {
+    const badge = await generateKeyPair("EdDSA", { extractable: true });
+    const token = await generateKeyPair("EdDSA", { extractable: true });
+    const badgeJwk = await exportJWK(badge.publicKey);
+
+    // Mirror Minister's did.json: only #key-2 is a verificationMethod and the
+    // sole assertionMethod entry. #key-3 lives in JWKS only, never here.
+    const didDoc = {
+      "@context": ["https://www.w3.org/ns/did/v1"],
+      id: DID,
+      verificationMethod: [
+        { id: KEY2, type: "JsonWebKey2020", controller: DID, publicKeyJwk: badgeJwk },
+      ],
+      assertionMethod: [KEY2],
+      authentication: [KEY2],
+    };
+
+    const fetchMock = vi.fn(async (input: unknown) => {
+      if (String(input) === `${ISSUER}/.well-known/did.json`) {
+        return new Response(JSON.stringify(didDoc), {
+          status: 200,
+          headers: { "content-type": "application/json" },
+        });
+      }
+      return new Response("not found", { status: 404 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    async function sign(kid: string, key: KeyLike) {
+      return new SignJWT({
+        vc: {
+          type: ["VerifiableCredential", "MinisterEmailDomainCredential"],
+          credentialSubject: { id: SUB, domain: "a.com" },
+        },
+      })
+        .setProtectedHeader({ alg: "EdDSA", typ: "vc+jwt", kid })
+        .setIssuer(DID)
+        .setSubject(SUB)
+        .setIssuedAt()
+        .setExpirationTime(Math.floor(Date.now() / 1000) + 31536000)
+        .sign(key);
+    }
+
+    return { badge, token, sign, fetchMock };
+  }
+
+  afterEach(() => {
+    _resetBadgeKeyCache();
+    vi.unstubAllGlobals();
+  });
+
+  it("ACCEPTS a badge signed by the assertionMethod key (#key-2)", async () => {
+    const { badge, sign } = await setup();
+    const jwt = await sign(KEY2, badge.privateKey);
+    const verified = await verifyMinisterBadge(jwt, { issuer: ISSUER });
+    expect(verified.type).toBe("email-domain");
+    expect(verified.subject).toBe(SUB);
+  });
+
+  it("REJECTS a badge signed by the token key (#key-3, not in assertionMethod)", async () => {
+    const { token, sign } = await setup();
+    const jwt = await sign(KEY3, token.privateKey);
+    await expect(
+      verifyMinisterBadge(jwt, { issuer: ISSUER }),
+    ).rejects.toBeInstanceOf(VcVerificationError);
+  });
+
+  it("REJECTS on the kid alone: a #key-3-labelled VC signed by the real badge key still fails", async () => {
+    // kid pinning, not signature strength: even a signature that WOULD verify
+    // against #key-2 is refused when presented under a kid outside assertionMethod.
+    const { badge, sign } = await setup();
+    const jwt = await sign(KEY3, badge.privateKey);
+    await expect(
+      verifyMinisterBadge(jwt, { issuer: ISSUER }),
+    ).rejects.toBeInstanceOf(VcVerificationError);
   });
 });

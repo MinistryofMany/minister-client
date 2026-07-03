@@ -54,7 +54,7 @@ var MinisterTokenError = class extends Error {
 };
 
 // src/verify-badge.ts
-import { createRemoteJWKSet } from "jose";
+import { importJWK as importJWK2 } from "jose";
 
 // src/jwt.ts
 import {
@@ -73,19 +73,84 @@ async function verifyJwt(jwt, key, options) {
 }
 
 // src/verify-badge.ts
-var jwksCache = /* @__PURE__ */ new Map();
-function remoteJwksFor(issuer) {
-  let set = jwksCache.get(issuer);
-  if (!set) {
-    set = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
-    jwksCache.set(issuer, set);
+var didResolverCache = /* @__PURE__ */ new Map();
+function assertionResolverFor(issuer) {
+  let resolver = didResolverCache.get(issuer);
+  if (!resolver) {
+    resolver = createDidAssertionResolver(issuer);
+    didResolverCache.set(issuer, resolver);
   }
-  return set;
+  return resolver;
+}
+async function loadAssertionKeys(issuer) {
+  const url = `${issuer}/.well-known/did.json`;
+  const res = await fetch(url);
+  if (!res.ok) {
+    throw new Error(`DID document fetch failed (${res.status}) for ${url}`);
+  }
+  const doc = await res.json();
+  const vms = Array.isArray(doc.verificationMethod) ? doc.verificationMethod : [];
+  const byId = /* @__PURE__ */ new Map();
+  for (const vm of vms) {
+    if (vm && typeof vm === "object" && typeof vm.id === "string") {
+      byId.set(vm.id, vm);
+    }
+  }
+  const assertion = Array.isArray(doc.assertionMethod) ? doc.assertionMethod : [];
+  if (assertion.length === 0) {
+    throw new Error("DID document has no `assertionMethod` entries");
+  }
+  const map = /* @__PURE__ */ new Map();
+  for (const entry of assertion) {
+    let vm;
+    if (typeof entry === "string") {
+      vm = byId.get(entry);
+    } else if (entry && typeof entry === "object") {
+      vm = entry;
+    }
+    const kid = vm && typeof vm.id === "string" ? vm.id : void 0;
+    const jwk = vm?.publicKeyJwk;
+    if (!kid || !jwk || typeof jwk !== "object") {
+      throw new Error(
+        `assertionMethod entry has no resolvable publicKeyJwk: ${String(
+          typeof entry === "string" ? entry : vm?.id ?? "<embedded>"
+        )}`
+      );
+    }
+    map.set(kid, await importJWK2(jwk, "EdDSA"));
+  }
+  return map;
+}
+function createDidAssertionResolver(issuer) {
+  let keysPromise;
+  const load = () => {
+    if (!keysPromise) {
+      keysPromise = loadAssertionKeys(issuer).catch((err) => {
+        keysPromise = void 0;
+        throw err;
+      });
+    }
+    return keysPromise;
+  };
+  return async (protectedHeader) => {
+    const keys = await load();
+    const kid = protectedHeader.kid;
+    if (typeof kid !== "string" || kid.length === 0) {
+      throw new Error("badge JWT has no `kid`; cannot pin to DID assertionMethod");
+    }
+    const key = keys.get(kid);
+    if (!key) {
+      throw new Error(
+        `badge kid (${kid}) is not in the issuer DID document assertionMethod`
+      );
+    }
+    return key;
+  };
 }
 async function verifyMinisterBadge(vcJwt, options) {
   const issuer = options.issuer.replace(/\/$/, "");
   const expectedIss = didFromIssuer(issuer);
-  const key = options.key ?? remoteJwksFor(issuer);
+  const key = options.key ?? assertionResolverFor(issuer);
   let payload;
   try {
     const result = await verifyJwt(vcJwt, key, {
@@ -162,13 +227,13 @@ async function verifyMinisterBadge(vcJwt, options) {
 }
 
 // src/verify-id-token.ts
-import { createRemoteJWKSet as createRemoteJWKSet2 } from "jose";
-var jwksCache2 = /* @__PURE__ */ new Map();
-function remoteJwksFor2(issuer) {
-  let set = jwksCache2.get(issuer);
+import { createRemoteJWKSet } from "jose";
+var jwksCache = /* @__PURE__ */ new Map();
+function remoteJwksFor(issuer) {
+  let set = jwksCache.get(issuer);
   if (!set) {
-    set = createRemoteJWKSet2(new URL(`${issuer}/.well-known/jwks.json`));
-    jwksCache2.set(issuer, set);
+    set = createRemoteJWKSet(new URL(`${issuer}/.well-known/jwks.json`));
+    jwksCache.set(issuer, set);
   }
   return set;
 }
@@ -177,7 +242,7 @@ async function verifyIdTokenPayload(idToken, options) {
   if (!options.clientId) {
     throw new MinisterTokenError("clientId (expected audience) is required to verify an id_token");
   }
-  const key = options.key ?? remoteJwksFor2(issuer);
+  const key = options.key ?? remoteJwksFor(issuer);
   let payload;
   try {
     const result = await verifyJwt(idToken, key, {
@@ -278,4 +343,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-L2LTH4OY.js.map
+//# sourceMappingURL=chunk-QXUXHGXG.js.map
