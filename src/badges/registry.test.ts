@@ -23,4 +23,12 @@ describe("badge registry", () => {
     expect(slugForCredentialType("MinisterAgeOver21Credential")).toBe("age-over-21");
     expect(slugForCredentialType("NotAThing")).toBeUndefined();
   });
+  it("registers the github-derived badge types with matching credentialTypes", () => {
+    expect(BADGE_TYPES["account-age"]?.credentialType).toBe("MinisterAccountAgeCredential");
+    expect(BADGE_TYPES["two-factor"]?.credentialType).toBe("MinisterTwoFactorCredential");
+    expect(BADGE_TYPES["social-following"]?.credentialType).toBe("MinisterSocialFollowingCredential");
+    expect(slugForCredentialType("MinisterAccountAgeCredential")).toBe("account-age");
+    expect(slugForCredentialType("MinisterTwoFactorCredential")).toBe("two-factor");
+    expect(slugForCredentialType("MinisterSocialFollowingCredential")).toBe("social-following");
+  });
 });

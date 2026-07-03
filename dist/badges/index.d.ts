@@ -31,6 +31,40 @@ declare const OAuthAccountClaims: z.ZodObject<{
     handle?: string | undefined;
 }>;
 type OAuthAccountClaims = z.infer<typeof OAuthAccountClaims>;
+declare const ACCOUNT_AGE_MONTHS: readonly [12, 24, 36, 60];
+type AccountAgeMonths = (typeof ACCOUNT_AGE_MONTHS)[number];
+declare const AccountAgeClaims: z.ZodObject<{
+    provider: z.ZodEnum<["github", "google", "discord"]>;
+    olderThanMonths: z.ZodUnion<[z.ZodLiteral<12>, z.ZodLiteral<24>, z.ZodLiteral<36>, z.ZodLiteral<60>]>;
+}, "strict", z.ZodTypeAny, {
+    provider: "github" | "google" | "discord";
+    olderThanMonths: 12 | 24 | 36 | 60;
+}, {
+    provider: "github" | "google" | "discord";
+    olderThanMonths: 12 | 24 | 36 | 60;
+}>;
+type AccountAgeClaims = z.infer<typeof AccountAgeClaims>;
+declare const TwoFactorClaims: z.ZodObject<{
+    provider: z.ZodEnum<["github", "google", "discord"]>;
+}, "strict", z.ZodTypeAny, {
+    provider: "github" | "google" | "discord";
+}, {
+    provider: "github" | "google" | "discord";
+}>;
+type TwoFactorClaims = z.infer<typeof TwoFactorClaims>;
+declare const FOLLOWERS_BUCKETS: readonly [10, 50, 100, 500, 1000];
+type FollowersBucket = (typeof FOLLOWERS_BUCKETS)[number];
+declare const SocialFollowingClaims: z.ZodObject<{
+    provider: z.ZodEnum<["github", "google", "discord"]>;
+    followersAtLeast: z.ZodUnion<[z.ZodLiteral<10>, z.ZodLiteral<50>, z.ZodLiteral<100>, z.ZodLiteral<500>, z.ZodLiteral<1000>]>;
+}, "strict", z.ZodTypeAny, {
+    provider: "github" | "google" | "discord";
+    followersAtLeast: 10 | 50 | 100 | 500 | 1000;
+}, {
+    provider: "github" | "google" | "discord";
+    followersAtLeast: 10 | 50 | 100 | 500 | 1000;
+}>;
+type SocialFollowingClaims = z.infer<typeof SocialFollowingClaims>;
 declare const AGE_THRESHOLDS: readonly [16, 18, 21, 25, 30, 35, 40, 45, 55, 65];
 type AgeThreshold = (typeof AGE_THRESHOLDS)[number];
 declare const AgeOverClaimsFor: (threshold: AgeThreshold) => z.ZodObject<{
@@ -113,4 +147,4 @@ declare function badgeTypeOf(vcType: string[]): string | undefined;
 declare function getBadgeClaimSchema(slug: string): z.ZodType<unknown> | undefined;
 declare function knownBadgeTypes(): string[];
 
-export { AGE_THRESHOLDS, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };
+export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, type AccountAgeMonths, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, type FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, TlsnAttestationClaims, TwoFactorClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };

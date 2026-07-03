@@ -11,21 +11,26 @@ import {
   verifyMinisterBadge,
   verifyMinisterBadges,
   verifyMinisterIdToken
-} from "./chunk-L2LTH4OY.js";
+} from "./chunk-PKOH2NGD.js";
 import "./chunk-R4XGCZVA.js";
 import {
+  ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
+  AccountAgeClaims,
   AgeOverClaimsFor,
   BADGE_TYPES,
   EmailDomainClaims,
   EmailExactClaims,
+  FOLLOWERS_BUCKETS,
   InviteCodeClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
   ResidencyCityClaims,
   ResidencyCountryClaims,
   ResidencyStateClaims,
+  SocialFollowingClaims,
   TlsnAttestationClaims,
+  TwoFactorClaims,
   badgeScope,
   badgeScopes,
   badgeTypeOf,
@@ -33,7 +38,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "./chunk-OY24DUVT.js";
+} from "./chunk-4E5KJT4H.js";
 
 // src/oidc.ts
 import { createRemoteJWKSet } from "jose";
@@ -198,11 +203,14 @@ function createMinisterVerifier(config) {
   };
 }
 export {
+  ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
+  AccountAgeClaims,
   AgeOverClaimsFor,
   BADGE_TYPES,
   EmailDomainClaims,
   EmailExactClaims,
+  FOLLOWERS_BUCKETS,
   InviteCodeClaims,
   MinisterTokenError,
   OAUTH_PROVIDERS,
@@ -211,7 +219,9 @@ export {
   ResidencyCityClaims,
   ResidencyCountryClaims,
   ResidencyStateClaims,
+  SocialFollowingClaims,
   TlsnAttestationClaims,
+  TwoFactorClaims,
   VcVerificationError,
   badgeScope,
   badgeScopes,

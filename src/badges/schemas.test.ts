@@ -5,6 +5,9 @@ import {
   OAuthAccountClaims,
   TlsnAttestationClaims,
   AGE_THRESHOLDS,
+  AccountAgeClaims,
+  TwoFactorClaims,
+  SocialFollowingClaims,
 } from "./schemas";
 
 describe("badge claim schemas", () => {
@@ -22,5 +25,23 @@ describe("badge claim schemas", () => {
   });
   it("exposes the age thresholds", () => {
     expect(AGE_THRESHOLDS).toContain(18);
+  });
+  it("account-age accepts a declared bucket and rejects off-grid/unknown keys", () => {
+    expect(AccountAgeClaims.parse({ provider: "github", olderThanMonths: 60 })).toEqual({
+      provider: "github",
+      olderThanMonths: 60,
+    });
+    expect(() => AccountAgeClaims.parse({ provider: "github", olderThanMonths: 30 })).toThrow();
+    expect(() =>
+      AccountAgeClaims.parse({ provider: "github", olderThanMonths: 12, createdAt: "x" }),
+    ).toThrow();
+  });
+  it("two-factor is a strict bare-provider claim", () => {
+    expect(TwoFactorClaims.parse({ provider: "github" })).toEqual({ provider: "github" });
+    expect(() => TwoFactorClaims.parse({ provider: "github", enabled: true })).toThrow();
+  });
+  it("social-following buckets the follower count", () => {
+    expect(SocialFollowingClaims.parse({ provider: "github", followersAtLeast: 1000 }).followersAtLeast).toBe(1000);
+    expect(() => SocialFollowingClaims.parse({ provider: "github", followersAtLeast: 742 })).toThrow();
   });
 });

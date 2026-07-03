@@ -10,6 +10,23 @@ var OAuthAccountClaims = z.object({
   accountId: z.string().min(1),
   handle: z.string().min(1).optional()
 });
+var ACCOUNT_AGE_MONTHS = [12, 24, 36, 60];
+var AccountAgeClaims = z.object({
+  provider: z.enum(OAUTH_PROVIDERS),
+  olderThanMonths: z.union([z.literal(12), z.literal(24), z.literal(36), z.literal(60)])
+}).strict();
+var TwoFactorClaims = z.object({ provider: z.enum(OAUTH_PROVIDERS) }).strict();
+var FOLLOWERS_BUCKETS = [10, 50, 100, 500, 1e3];
+var SocialFollowingClaims = z.object({
+  provider: z.enum(OAUTH_PROVIDERS),
+  followersAtLeast: z.union([
+    z.literal(10),
+    z.literal(50),
+    z.literal(100),
+    z.literal(500),
+    z.literal(1e3)
+  ])
+}).strict();
 var AGE_THRESHOLDS = [16, 18, 21, 25, 30, 35, 40, 45, 55, 65];
 var AgeOverClaimsFor = (threshold) => z.object({ threshold: z.literal(threshold) });
 var COUNTRY_RE = /^[A-Z]{2}$/u;
@@ -37,6 +54,9 @@ var ENTRIES = [
   defineBadgeType({ slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims }),
   defineBadgeType({ slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims }),
   defineBadgeType({ slug: "oauth-account", credentialType: "MinisterOauthAccountCredential", claims: OAuthAccountClaims }),
+  defineBadgeType({ slug: "account-age", credentialType: "MinisterAccountAgeCredential", claims: AccountAgeClaims }),
+  defineBadgeType({ slug: "two-factor", credentialType: "MinisterTwoFactorCredential", claims: TwoFactorClaims }),
+  defineBadgeType({ slug: "social-following", credentialType: "MinisterSocialFollowingCredential", claims: SocialFollowingClaims }),
   defineBadgeType({ slug: "residency-country", credentialType: "MinisterResidencyCountryCredential", claims: ResidencyCountryClaims }),
   defineBadgeType({ slug: "residency-state", credentialType: "MinisterResidencyStateCredential", claims: ResidencyStateClaims }),
   defineBadgeType({ slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims }),
@@ -86,6 +106,11 @@ export {
   EmailExactClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
+  ACCOUNT_AGE_MONTHS,
+  AccountAgeClaims,
+  TwoFactorClaims,
+  FOLLOWERS_BUCKETS,
+  SocialFollowingClaims,
   AGE_THRESHOLDS,
   AgeOverClaimsFor,
   ResidencyCountryClaims,
@@ -102,4 +127,4 @@ export {
   getBadgeClaimSchema,
   knownBadgeTypes
 };
-//# sourceMappingURL=chunk-OY24DUVT.js.map
+//# sourceMappingURL=chunk-4E5KJT4H.js.map
