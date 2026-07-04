@@ -11,20 +11,24 @@ import {
   verifyMinisterBadge,
   verifyMinisterBadges,
   verifyMinisterIdToken
-} from "./chunk-QXUXHGXG.js";
+} from "./chunk-AIB6IEP6.js";
 import "./chunk-R4XGCZVA.js";
 import {
+  ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
+  AccountAgeClaims,
   AgeOverClaimsFor,
   BADGE_TYPES,
   EmailDomainClaims,
   EmailExactClaims,
+  FOLLOWERS_BUCKETS,
   InviteCodeClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
   ResidencyCityClaims,
   ResidencyCountryClaims,
   ResidencyStateClaims,
+  SocialFollowingClaims,
   TlsnAttestationClaims,
   badgeScope,
   badgeScopes,
@@ -33,7 +37,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "./chunk-OY24DUVT.js";
+} from "./chunk-JS6T4O33.js";
 
 // src/oidc.ts
 import { createRemoteJWKSet } from "jose";
@@ -198,11 +202,14 @@ function createMinisterVerifier(config) {
   };
 }
 export {
+  ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
+  AccountAgeClaims,
   AgeOverClaimsFor,
   BADGE_TYPES,
   EmailDomainClaims,
   EmailExactClaims,
+  FOLLOWERS_BUCKETS,
   InviteCodeClaims,
   MinisterTokenError,
   OAUTH_PROVIDERS,
@@ -211,6 +218,7 @@ export {
   ResidencyCityClaims,
   ResidencyCountryClaims,
   ResidencyStateClaims,
+  SocialFollowingClaims,
   TlsnAttestationClaims,
   VcVerificationError,
   badgeScope,

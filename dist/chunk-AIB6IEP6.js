@@ -1,7 +1,7 @@
 import {
   badgeTypeOf,
   getBadgeClaimSchema
-} from "./chunk-OY24DUVT.js";
+} from "./chunk-JS6T4O33.js";
 
 // src/did.ts
 function buildDid(domain) {
@@ -343,4 +343,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-QXUXHGXG.js.map
+//# sourceMappingURL=chunk-AIB6IEP6.js.map
