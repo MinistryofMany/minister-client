@@ -13,9 +13,12 @@ export const EmailExactClaims = z.object({ email: z.string().email().toLowerCase
 export type EmailExactClaims = z.infer<typeof EmailExactClaims>;
 
 export const OAUTH_PROVIDERS = ["github", "google", "discord"] as const;
+// accountId REMOVED (crypto-core Phase 1): the provider's numeric account id was
+// the raw Sybil anchor. Minister now nullifies it into an opaque per-RP nullifier
+// and DISCARDS it; only the renameable handle is revealed. Kept in sync with
+// Minister's @ministryofmany/shared OAuthAccountClaims.
 export const OAuthAccountClaims = z.object({
   provider: z.enum(OAUTH_PROVIDERS),
-  accountId: z.string().min(1),
   handle: z.string().min(1).optional(),
 });
 export type OAuthAccountClaims = z.infer<typeof OAuthAccountClaims>;

@@ -19,15 +19,12 @@ type EmailExactClaims = z.infer<typeof EmailExactClaims>;
 declare const OAUTH_PROVIDERS: readonly ["github", "google", "discord"];
 declare const OAuthAccountClaims: z.ZodObject<{
     provider: z.ZodEnum<["github", "google", "discord"]>;
-    accountId: z.ZodString;
     handle: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     provider: "github" | "google" | "discord";
-    accountId: string;
     handle?: string | undefined;
 }, {
     provider: "github" | "google" | "discord";
-    accountId: string;
     handle?: string | undefined;
 }>;
 type OAuthAccountClaims = z.infer<typeof OAuthAccountClaims>;
@@ -93,16 +90,19 @@ declare const TlsnAttestationClaims: z.ZodObject<{
 }>;
 type TlsnAttestationClaims = z.infer<typeof TlsnAttestationClaims>;
 
+type SybilResistance = "none" | "weak" | "moderate";
 interface BadgeTypeDef {
     slug: string;
     credentialType: string;
     scope: string;
     claims: z.ZodType<unknown>;
+    sybilResistance: SybilResistance;
 }
 declare function defineBadgeType(input: {
     slug: string;
     credentialType: string;
     claims: z.ZodType<unknown>;
+    sybilResistance: SybilResistance;
 }): BadgeTypeDef;
 declare const BADGE_TYPES: Record<string, BadgeTypeDef>;
 declare function slugForCredentialType(credentialType: string): string | undefined;
@@ -113,4 +113,4 @@ declare function badgeTypeOf(vcType: string[]): string | undefined;
 declare function getBadgeClaimSchema(slug: string): z.ZodType<unknown> | undefined;
 declare function knownBadgeTypes(): string[];
 
-export { AGE_THRESHOLDS, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };
+export { AGE_THRESHOLDS, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, type SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };

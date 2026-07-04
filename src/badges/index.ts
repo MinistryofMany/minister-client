@@ -11,5 +11,5 @@
 // copy it can drift; a drift-check against `@ministryofmany/shared` is planned.
 export * from "./schemas";
 export { BADGE_TYPES, defineBadgeType, slugForCredentialType } from "./registry";
-export type { BadgeTypeDef } from "./registry";
+export type { BadgeTypeDef, SybilResistance } from "./registry";
 export { badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes } from "./helpers";
