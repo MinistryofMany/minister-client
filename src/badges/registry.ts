@@ -3,6 +3,8 @@ import {
   EmailDomainClaims,
   EmailExactClaims,
   OAuthAccountClaims,
+  AccountAgeClaims,
+  SocialFollowingClaims,
   ResidencyCountryClaims,
   ResidencyStateClaims,
   ResidencyCityClaims,
@@ -51,13 +53,18 @@ export function defineBadgeType(input: {
 // `ministerCredentialType(slug)` output exactly. If a future Minister slug
 // uses irregular casing, fix the literal here (this file is the one place
 // to do it). The planned drift-check will assert these against @ministryofmany/shared.
-// NOTE: this SDK registry is a SUBSET of Minister's — it omits `account-age` and
-// `social-following` (github-derived, provider-side only). sybilResistance values
-// mirror Minister's §2.3 table for every type present here.
+// NOTE: sybilResistance values mirror Minister's @ministryofmany/shared §2.3
+// table for every type. `account-age` and `social-following` are the two
+// `moderate` (nullifier-anchored) github-derived types — they MUST be registered
+// here or an RP could not verify them (badgeTypeOf → undefined → rejected). The
+// planned drift-check will assert this registry's (slug, sybilResistance) set
+// against @ministryofmany/shared.
 const ENTRIES: BadgeTypeDef[] = [
   defineBadgeType({ slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims, sybilResistance: "weak" }),
   defineBadgeType({ slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims, sybilResistance: "weak" }),
   defineBadgeType({ slug: "oauth-account", credentialType: "MinisterOauthAccountCredential", claims: OAuthAccountClaims, sybilResistance: "weak" }),
+  defineBadgeType({ slug: "account-age", credentialType: "MinisterAccountAgeCredential", claims: AccountAgeClaims, sybilResistance: "moderate" }),
+  defineBadgeType({ slug: "social-following", credentialType: "MinisterSocialFollowingCredential", claims: SocialFollowingClaims, sybilResistance: "moderate" }),
   defineBadgeType({ slug: "residency-country", credentialType: "MinisterResidencyCountryCredential", claims: ResidencyCountryClaims, sybilResistance: "none" }),
   defineBadgeType({ slug: "residency-state", credentialType: "MinisterResidencyStateCredential", claims: ResidencyStateClaims, sybilResistance: "none" }),
   defineBadgeType({ slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" }),

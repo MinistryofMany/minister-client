@@ -9,6 +9,22 @@ var OAuthAccountClaims = z.object({
   provider: z.enum(OAUTH_PROVIDERS),
   handle: z.string().min(1).optional()
 });
+var ACCOUNT_AGE_MONTHS = [12, 24, 36, 60];
+var AccountAgeClaims = z.object({
+  provider: z.enum(OAUTH_PROVIDERS),
+  olderThanMonths: z.union([z.literal(12), z.literal(24), z.literal(36), z.literal(60)])
+}).strict();
+var FOLLOWERS_BUCKETS = [10, 50, 100, 500, 1e3];
+var SocialFollowingClaims = z.object({
+  provider: z.enum(OAUTH_PROVIDERS),
+  followersAtLeast: z.union([
+    z.literal(10),
+    z.literal(50),
+    z.literal(100),
+    z.literal(500),
+    z.literal(1e3)
+  ])
+}).strict();
 var AGE_THRESHOLDS = [16, 18, 21, 25, 30, 35, 40, 45, 55, 65];
 var AgeOverClaimsFor = (threshold) => z.object({ threshold: z.literal(threshold) });
 var COUNTRY_RE = /^[A-Z]{2}$/u;
@@ -36,6 +52,8 @@ var ENTRIES = [
   defineBadgeType({ slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims, sybilResistance: "weak" }),
   defineBadgeType({ slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims, sybilResistance: "weak" }),
   defineBadgeType({ slug: "oauth-account", credentialType: "MinisterOauthAccountCredential", claims: OAuthAccountClaims, sybilResistance: "weak" }),
+  defineBadgeType({ slug: "account-age", credentialType: "MinisterAccountAgeCredential", claims: AccountAgeClaims, sybilResistance: "moderate" }),
+  defineBadgeType({ slug: "social-following", credentialType: "MinisterSocialFollowingCredential", claims: SocialFollowingClaims, sybilResistance: "moderate" }),
   defineBadgeType({ slug: "residency-country", credentialType: "MinisterResidencyCountryCredential", claims: ResidencyCountryClaims, sybilResistance: "none" }),
   defineBadgeType({ slug: "residency-state", credentialType: "MinisterResidencyStateCredential", claims: ResidencyStateClaims, sybilResistance: "none" }),
   defineBadgeType({ slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" }),
@@ -86,6 +104,10 @@ export {
   EmailExactClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
+  ACCOUNT_AGE_MONTHS,
+  AccountAgeClaims,
+  FOLLOWERS_BUCKETS,
+  SocialFollowingClaims,
   AGE_THRESHOLDS,
   AgeOverClaimsFor,
   ResidencyCountryClaims,
@@ -102,4 +124,4 @@ export {
   getBadgeClaimSchema,
   knownBadgeTypes
 };
-//# sourceMappingURL=chunk-6EKYSDME.js.map
+//# sourceMappingURL=chunk-JS6T4O33.js.map
