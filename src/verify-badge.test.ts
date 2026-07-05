@@ -7,6 +7,11 @@ const ISSUER = "https://ministry.test";
 const DID = "did:web:ministry.test";
 const SUB = "did:web:ministry.test:users:u1";
 
+// A well-formed `mnv1:` tag with a REALISTIC 43-char base64url tail (Minister
+// derives base64url of a 32-byte HMAC/VOPRF output — always 43 chars). The SDK
+// now length-bounds the tail, so test fixtures must use realistic lengths.
+const tag = (seed: string): string => `mnv1:${seed.padEnd(43, "0").slice(0, 43)}`;
+
 interface SignOpts {
   claims?: Record<string, unknown>;
   credentialType?: string;
@@ -165,6 +170,84 @@ describe("verifyMinisterBadge", () => {
     // signature; never guess.
     for (const bad of ["2026-03-15", "2026-13", "2026-00", "March 2026", 202603, "", null]) {
       const jwt = await signVc({ claims: { domain: "a.com", issuanceMonth: bad } });
+      await expect(
+        verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
+      ).rejects.toBeInstanceOf(VcVerificationError);
+    }
+  });
+
+  // ---------------------------------------------------------------------------
+  // Reserved per-RP Sybil nullifier: `credentialSubject.nullifier` (`mnv1:...`).
+  // Issuer metadata, NOT a per-type claim: surfaced as its own field, stripped
+  // BEFORE the (possibly strict) per-type schema parse, and format-checked.
+  // ---------------------------------------------------------------------------
+
+  it("surfaces the nullifier as metadata and STRIPS it from the claims", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "a.com", nullifier: tag("AbC-123_def") } });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.nullifier).toBe(tag("AbC-123_def"));
+    expect(badge.claims).toEqual({ domain: "a.com" });
+  });
+
+  it("keeps a STRICT nullifier-bearing schema (account-age) passing AND exposes the value", async () => {
+    // AccountAgeClaims is .strict(): if `nullifier` leaked into the schema
+    // parse, every disclosed account-age badge would be rejected. The strip
+    // must happen before validation, like `id`/`issuanceMonth`.
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({
+      credentialType: "MinisterAccountAgeCredential",
+      claims: {
+        provider: "github",
+        olderThanMonths: 24,
+        nullifier: tag("ACCOUNT_age_tag"),
+        issuanceMonth: "2026-03",
+      },
+    });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.type).toBe("account-age");
+    expect(badge.claims).toEqual({ provider: "github", olderThanMonths: 24 });
+    expect(badge.nullifier).toBe(tag("ACCOUNT_age_tag"));
+    expect(badge.issuanceMonth).toBe("2026-03");
+  });
+
+  it("keeps a STRICT nullifier-bearing schema (social-following) passing AND exposes the value", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({
+      credentialType: "MinisterSocialFollowingCredential",
+      claims: { provider: "github", followersAtLeast: 100, nullifier: tag("SOCIAL_tag_9") },
+    });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.type).toBe("social-following");
+    expect(badge.claims).toEqual({ provider: "github", followersAtLeast: 100 });
+    expect(badge.nullifier).toBe(tag("SOCIAL_tag_9"));
+  });
+
+  it("tolerates an absent nullifier (ref-less badge / pre-M5): verifies, field undefined", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    const jwt = await signVc({ claims: { domain: "a.com" } });
+    const badge = await verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk });
+    expect(badge.nullifier).toBeUndefined();
+  });
+
+  it("rejects a present-but-malformed nullifier (fails closed on issuer drift / smuggle)", async () => {
+    const { publicJwk, signVc } = await makeKeyAndSigner();
+    // Missing prefix, wrong prefix, illegal chars, non-string, empty, too-short
+    // (under the length bound), and UNBOUNDED-length (a compromised issuer
+    // stamping an arbitrarily long tag RPs would persist) — all must fail closed
+    // rather than gate on a garbage tag.
+    for (const bad of [
+      "deadbeef",
+      "mnv2:abc",
+      "mnv1:",
+      "mnv1:has space",
+      "mnv1:plus+slash/",
+      "mnv1:tooShort", // valid charset but under the 20-char floor
+      `mnv1:${"A".repeat(65)}`, // over the 64-char cap (was unbounded before)
+      123,
+      "",
+    ]) {
+      const jwt = await signVc({ claims: { domain: "a.com", nullifier: bad } });
       await expect(
         verifyMinisterBadge(jwt, { issuer: ISSUER, key: publicJwk }),
       ).rejects.toBeInstanceOf(VcVerificationError);

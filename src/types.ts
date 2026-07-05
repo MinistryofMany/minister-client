@@ -48,6 +48,35 @@ export interface MinisterClaims {
 }
 
 /**
+ * Minister's per-relying-party Sybil-dedup nullifier (`mnv1:...`), the value
+ * Minister stamps in a disclosed badge's `credentialSubject.nullifier` (M5).
+ *
+ * BRANDED so it can NEVER be interchanged with the OTHER, unrelated nullifier
+ * primitive in this ecosystem — `@ministryofmany/nullifier`'s Poseidon/BN254
+ * field string (`poseidon2(toField(sub), contextId)`), which is account-anchored
+ * and SNARK-provable. These two are permanently distinct (M3):
+ *
+ *   | | `@ministryofmany/nullifier` | this `MinisterGatingNullifier` |
+ *   |---|---|---|
+ *   | math | Poseidon / BN254 | RFC 9497 VOPRF + HMAC-SHA256 |
+ *   | anchor | the per-RP `sub` (account) | the credential (email, github id) |
+ *   | circuit-usable | YES | NO (gating-only, plaintext compare) |
+ *   | catches | same-account-across-contexts | same-credential-across-accounts |
+ *
+ * There is no conversion between them. A future circuit-usable credential
+ * nullifier must be a NEW Poseidon construction, never a bridge from this value.
+ *
+ * HONESTY: this proves ONE CREDENTIAL, not one person. It is per-site
+ * (different, unlinkable at other RPs), stable for the same credential (the same
+ * value if any account re-proves it here, surviving account delete/re-create),
+ * and only as strong as the credential behind it (see each badge type's
+ * `sybilResistance`). Gate on it; do not treat it as a unique-human oracle.
+ */
+export type MinisterGatingNullifier = string & {
+  readonly __brand: "MinisterGatingNullifier";
+};
+
+/**
  * A signature-verified, schema-validated badge.
  *
  * TEMPORAL JWT CLAIMS ARE DISCLOSURE-SHAPED, NOT ISSUANCE-SHAPED (MIN-1).
@@ -101,6 +130,21 @@ export interface VerifiedBadge {
   // Undefined when the disclosing Minister predates the claim; freshness
   // checks then fail closed (no evidence ⇒ no maxAgeDays pass).
   issuanceMonth?: string;
+  // Minister's per-RP Sybil-dedup nullifier (`mnv1:...`), when present — a
+  // reserved `credentialSubject.nullifier` key Minister stamps under its
+  // signature at disclosure (M5). Bound to THIS badge's subject/jti/type/exp,
+  // so it cannot be lifted onto another credential or replayed as another user.
+  //
+  // Use it to gate on "one credential" (Sybil dedup, ban persistence): the SAME
+  // value appears if any account re-proves the same credential to YOUR site, and
+  // it PERSISTS across account delete/re-create; a DIFFERENT, unlinkable value
+  // appears at other sites. It is NOT a unique-human oracle — read
+  // `MinisterGatingNullifier` for the full honesty + non-interchangeability note.
+  //
+  // Undefined for badges with no wired nullifier (invite-code, age/residency,
+  // and any pre-M5 disclosure). Present-but-malformed (`!^mnv1:[A-Za-z0-9_-]+$`)
+  // fails the badge closed, like `issuanceMonth`.
+  nullifier?: MinisterGatingNullifier;
   // The original VC JWT, for storage or forwarding.
   raw: string;
 }

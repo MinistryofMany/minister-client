@@ -28,6 +28,7 @@ export type {
   OidcFlowState,
   MinisterClaims,
   VerifiedBadge,
+  MinisterGatingNullifier,
   RejectedBadge,
   BadgesResult,
   ExchangeResult,

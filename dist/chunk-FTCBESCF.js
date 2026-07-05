@@ -73,6 +73,7 @@ async function verifyJwt(jwt, key, options) {
 }
 
 // src/verify-badge.ts
+var NULLIFIER_RE = /^mnv1:[A-Za-z0-9_-]{20,64}$/;
 var didResolverCache = /* @__PURE__ */ new Map();
 function assertionResolverFor(issuer) {
   let resolver = didResolverCache.get(issuer);
@@ -197,6 +198,7 @@ async function verifyMinisterBadge(vcJwt, options) {
   const {
     id: _id,
     issuanceMonth: rawIssuanceMonth,
+    nullifier: rawNullifier,
     ...rawClaims
   } = credentialSubject;
   let issuanceMonth;
@@ -207,6 +209,15 @@ async function verifyMinisterBadge(vcJwt, options) {
       );
     }
     issuanceMonth = rawIssuanceMonth;
+  }
+  let nullifier;
+  if (rawNullifier !== void 0) {
+    if (typeof rawNullifier !== "string" || !NULLIFIER_RE.test(rawNullifier)) {
+      throw new VcVerificationError(
+        "VC `credentialSubject.nullifier` is not a well-formed mnv1 nullifier"
+      );
+    }
+    nullifier = rawNullifier;
   }
   const schema = getBadgeClaimSchema(slug);
   let claims;
@@ -222,6 +233,7 @@ async function verifyMinisterBadge(vcJwt, options) {
     claims,
     subject: payload.sub,
     ...issuanceMonth !== void 0 ? { issuanceMonth } : {},
+    ...nullifier !== void 0 ? { nullifier } : {},
     raw: vcJwt
   };
 }
@@ -343,4 +355,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-AIB6IEP6.js.map
+//# sourceMappingURL=chunk-FTCBESCF.js.map

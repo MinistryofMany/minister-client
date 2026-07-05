@@ -129,6 +129,13 @@ export function makeVerifier(deps: VerifierDeps) {
         // The issuance-month bucket START (coarse, fail-closed) — never the
         // disclosure-time iat. See issuedAtFromIssuanceMonth.
         issuedAt: issuedAtFromIssuanceMonth(b.issuanceMonth),
+        // NOTE: `b.nullifier` (the per-RP `mnv1:` gating tag) is intentionally
+        // DROPPED here — this mapping is not wired for nullifier-based gating
+        // yet (the Discreetly gating follow-up is optional per the crypto-core
+        // ADR). It does NOT propagate to policy evaluation via `attributes`
+        // either: `b.claims` has the nullifier stripped SDK-side. When room
+        // gating on the nullifier lands, thread it through as an optional field
+        // here; until then, do NOT assume it reaches the policy layer.
       })),
     };
   };
