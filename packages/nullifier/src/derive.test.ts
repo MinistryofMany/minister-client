@@ -37,6 +37,15 @@ describe("toField golden vectors", () => {
   it("is field-bounded", () => {
     expect(toField("any-long-string-".repeat(20))).toBeLessThan(FIELD);
   });
+
+  it("REFUSES an mnv1 gating nullifier (M3 cross-primitive guard)", () => {
+    // The gating nullifier and this Poseidon primitive are non-interchangeable;
+    // feeding one into the other must fail loudly, not produce a field element.
+    expect(() => toField("mnv1:AbC-123_def")).toThrow(/mnv1/);
+    expect(() => deriveContextNullifier("mnv1:AbC-123_def", 700n)).toThrow(/mnv1/);
+    // A plain sub that merely CONTAINS the substring elsewhere is unaffected.
+    expect(() => toField("user-mnv1:not-a-prefix")).not.toThrow();
+  });
 });
 
 describe("deriveContextNullifier golden vectors", () => {

@@ -8,7 +8,9 @@
 // carries only what a relying party needs - claim schemas, slugs,
 // credentialType mappings, and scope helpers - and omits provider/UI
 // concerns (icon keys, display labels, issuance helpers). Because it is a
-// copy it can drift; a drift-check against `@ministryofmany/shared` is planned.
+// copy it can drift; `drift.test.ts` pins this registry (slug set,
+// credentialType, sybilResistance, and schema shape) against a frozen
+// transcription of `@ministryofmany/shared` — update both in lockstep.
 export * from "./schemas";
 export { BADGE_TYPES, defineBadgeType, slugForCredentialType } from "./registry";
 export type { BadgeTypeDef, SybilResistance } from "./registry";

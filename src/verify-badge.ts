@@ -4,7 +4,18 @@ import { badgeTypeOf, getBadgeClaimSchema } from "./badges/helpers";
 import { didFromIssuer } from "./did";
 import { verifyJwt } from "./jwt";
 import { VcVerificationError } from "./errors";
-import type { KeyInput, VerifiedBadge } from "./types";
+import type { KeyInput, MinisterGatingNullifier, VerifiedBadge } from "./types";
+
+// The disclosed per-RP Sybil nullifier is version-prefixed `mnv1:` followed by
+// base64url. Strictly format-checked; a malformed value fails the badge closed.
+// LENGTH-BOUNDED: Minister derives the tag as base64url of a 32-byte HMAC/VOPRF
+// output — exactly 43 chars (Minister's own signet trust boundary pins {43}).
+// The value is issuer-signed, so this is defense-in-depth: a bounded tail keeps
+// a buggy/compromised issuer from stamping an arbitrarily long tag that RPs then
+// persist in ban/dedup tables. The window is generous (20..64) rather than a
+// hard {43} so a future same-shape construction is not brittle; a genuinely new
+// wire shape versions behind `mnv2` and gets its own check.
+const NULLIFIER_RE = /^mnv1:[A-Za-z0-9_-]{20,64}$/;
 
 // Verify a Minister-issued verifiable credential against Minister's PUBLIC badge
 // key. Unlike `@ministryofmany/vc`'s `verifyVc` (which threads a full Issuer
@@ -217,14 +228,17 @@ export async function verifyMinisterBadge(
     );
   }
 
-  // Validate the claims against that badge type's schema. Two RESERVED keys
-  // are stripped first: `id` (redundant with `sub`) and `issuanceMonth`
-  // (Minister's coarse-issuance metadata, stamped at disclosure re-mint —
-  // cross-cutting VC metadata, never a per-type claim; stripping it keeps
-  // strict per-type schemas like tlsn-attestation passing).
+  // Validate the claims against that badge type's schema. THREE RESERVED keys
+  // are stripped first: `id` (redundant with `sub`), `issuanceMonth` (Minister's
+  // coarse-issuance metadata), and `nullifier` (the per-RP Sybil-dedup tag,
+  // stamped at disclosure re-mint). All three are cross-cutting VC metadata,
+  // never per-type claims; stripping them BEFORE the schema parse keeps strict
+  // per-type schemas (account-age, social-following, tlsn-attestation) passing
+  // — a nullifier-bearing account-age badge would otherwise fail `.strict()`.
   const {
     id: _id,
     issuanceMonth: rawIssuanceMonth,
+    nullifier: rawNullifier,
     ...rawClaims
   } = credentialSubject;
 
@@ -246,6 +260,20 @@ export async function verifyMinisterBadge(
     issuanceMonth = rawIssuanceMonth;
   }
 
+  // Format-check the per-RP nullifier when present. A malformed value means
+  // issuer drift or a claim-shaped smuggle upstream of the signature — fail
+  // closed rather than gate on garbage. Absent is fine (no wired nullifier, or
+  // a pre-M5 disclosure); gating code then treats the badge as untagged.
+  let nullifier: MinisterGatingNullifier | undefined;
+  if (rawNullifier !== undefined) {
+    if (typeof rawNullifier !== "string" || !NULLIFIER_RE.test(rawNullifier)) {
+      throw new VcVerificationError(
+        "VC `credentialSubject.nullifier` is not a well-formed mnv1 nullifier",
+      );
+    }
+    nullifier = rawNullifier as MinisterGatingNullifier;
+  }
+
   const schema = getBadgeClaimSchema(slug);
   let claims: Record<string, unknown>;
   try {
@@ -265,6 +293,7 @@ export async function verifyMinisterBadge(
     claims,
     subject: payload.sub,
     ...(issuanceMonth !== undefined ? { issuanceMonth } : {}),
+    ...(nullifier !== undefined ? { nullifier } : {}),
     raw: vcJwt,
   };
 }

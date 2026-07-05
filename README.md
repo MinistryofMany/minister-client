@@ -252,6 +252,64 @@ your own callback.
 > rejected, check that Minister's `MINISTER_ISSUER_DOMAIN` host matches its
 > OIDC issuer host.
 
+## Sybil gating with the per-RP nullifier
+
+Some badges carry a **gating nullifier** — `verifiedBadge.nullifier`, an opaque
+`mnv1:...` string typed as `MinisterGatingNullifier`. When present, it is a
+per-relying-party Sybil-dedup tag Minister derives from the *credential* behind
+the badge (the email, the GitHub account) and stamps inside the signed
+`credentialSubject` at disclosure. Use it to enforce "one credential, one
+account" on your side (dedup, persistent bans):
+
+```ts
+const badge = badges.find((b) => b.type === "oauth-account");
+if (badge?.nullifier) {
+  // Stable per (credential, YOUR site). Ban or dedup keyed on this value.
+  await gateOn(badge.nullifier);
+}
+```
+
+Its guarantees, precisely:
+
+- **Per-site and unlinkable.** Your site sees a value derived for your
+  `client_id`; other sites get a *different, unlinkable* tag for the same
+  credential. It is not a cross-site correlator.
+- **Stable and persistent.** The *same* value appears if any account re-proves
+  the same credential to your site — and it **survives the user deleting and
+  re-creating their Minister account**, so a ban keyed on it persists across that
+  churn.
+- **Bound under the signature.** It rides in the same signed VC as the badge,
+  tied to this badge's subject, `jti`, type, and `exp`, so it cannot be lifted
+  onto another credential or replayed as another user. The existing binding rule
+  still holds: the wrappers (`verifyBadges` / `exchangeCode` /
+  `ministerBadgesFromProfile`) require the badge subject's trailing component to
+  equal the `id_token` `sub`, so a borrowed badge lands in `rejected`.
+- **Absent ⇒ untagged.** Badges with no wired nullifier (invite-code,
+  age/residency, and any pre-M5 disclosure) expose `nullifier: undefined`;
+  gate accordingly. A present-but-malformed value fails the badge closed.
+
+**Honesty: this proves one credential, not one person.** Its strength is only
+the strength of the credential behind it — see each badge type's
+`sybilResistance` (`none` / `weak` / `moderate`). A `weak` anchor (catch-all
+email domains, cheap GitHub accounts) is cheap to farm; weight it yourself.
+Never treat the nullifier as a unique-human oracle.
+
+### Two nullifier primitives, permanently distinct
+
+This value is **not** interchangeable with `@ministryofmany/nullifier`'s
+Poseidon/BN254 nullifier, and there is no conversion between them:
+
+| | `@ministryofmany/nullifier` | `MinisterGatingNullifier` (this) |
+| --- | --- | --- |
+| Math | Poseidon / BN254 | RFC 9497 VOPRF + HMAC-SHA256 |
+| Anchor | the per-RP `sub` (account) | the credential (email, GitHub id) |
+| Circuit-usable | yes (SNARK-provable; membership/RLN) | no (gating-only, plaintext compare) |
+| Catches | same account across contexts | same credential across accounts |
+
+The branded type stops the two from being mixed at compile time. A future
+circuit-usable *credential* nullifier must be a new Poseidon construction, never
+a bridge from this gating value.
+
 ## API
 
 | Export | Purpose |

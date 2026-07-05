@@ -1,5 +1,5 @@
-import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, P as PkcePair, M as MinisterClientConfig, a as MinisterClaims, B as BadgesResult } from './types-B-nDX3ql.js';
-export { b as MinisterTokenError, O as OidcError, c as OidcFlowState, R as RejectedBadge, d as VcVerificationError } from './types-B-nDX3ql.js';
+import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, P as PkcePair, M as MinisterClientConfig, a as MinisterClaims, B as BadgesResult } from './types-C8FYcOBP.js';
+export { b as MinisterGatingNullifier, c as MinisterTokenError, O as OidcError, d as OidcFlowState, R as RejectedBadge, e as VcVerificationError } from './types-C8FYcOBP.js';
 import { JWTPayload } from 'jose';
 export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
 import 'zod';

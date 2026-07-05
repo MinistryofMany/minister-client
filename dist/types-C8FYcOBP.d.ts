@@ -33,6 +33,34 @@ interface MinisterClaims {
     raw: string;
 }
 /**
+ * Minister's per-relying-party Sybil-dedup nullifier (`mnv1:...`), the value
+ * Minister stamps in a disclosed badge's `credentialSubject.nullifier` (M5).
+ *
+ * BRANDED so it can NEVER be interchanged with the OTHER, unrelated nullifier
+ * primitive in this ecosystem — `@ministryofmany/nullifier`'s Poseidon/BN254
+ * field string (`poseidon2(toField(sub), contextId)`), which is account-anchored
+ * and SNARK-provable. These two are permanently distinct (M3):
+ *
+ *   | | `@ministryofmany/nullifier` | this `MinisterGatingNullifier` |
+ *   |---|---|---|
+ *   | math | Poseidon / BN254 | RFC 9497 VOPRF + HMAC-SHA256 |
+ *   | anchor | the per-RP `sub` (account) | the credential (email, github id) |
+ *   | circuit-usable | YES | NO (gating-only, plaintext compare) |
+ *   | catches | same-account-across-contexts | same-credential-across-accounts |
+ *
+ * There is no conversion between them. A future circuit-usable credential
+ * nullifier must be a NEW Poseidon construction, never a bridge from this value.
+ *
+ * HONESTY: this proves ONE CREDENTIAL, not one person. It is per-site
+ * (different, unlinkable at other RPs), stable for the same credential (the same
+ * value if any account re-proves it here, surviving account delete/re-create),
+ * and only as strong as the credential behind it (see each badge type's
+ * `sybilResistance`). Gate on it; do not treat it as a unique-human oracle.
+ */
+type MinisterGatingNullifier = string & {
+    readonly __brand: "MinisterGatingNullifier";
+};
+/**
  * A signature-verified, schema-validated badge.
  *
  * TEMPORAL JWT CLAIMS ARE DISCLOSURE-SHAPED, NOT ISSUANCE-SHAPED (MIN-1).
@@ -62,6 +90,7 @@ interface VerifiedBadge {
     claims: Record<string, unknown>;
     subject: string;
     issuanceMonth?: string;
+    nullifier?: MinisterGatingNullifier;
     raw: string;
 }
 interface RejectedBadge {
@@ -79,4 +108,4 @@ interface ExchangeResult {
 }
 type KeyInput = KeyLike | JWK | Uint8Array | JWTVerifyGetKey;
 
-export { type BadgesResult as B, type ExchangeResult as E, type KeyInput as K, type MinisterClientConfig as M, OidcError as O, type PkcePair as P, type RejectedBadge as R, type VerifiedBadge as V, type MinisterClaims as a, MinisterTokenError as b, type OidcFlowState as c, VcVerificationError as d };
+export { type BadgesResult as B, type ExchangeResult as E, type KeyInput as K, type MinisterClientConfig as M, OidcError as O, type PkcePair as P, type RejectedBadge as R, type VerifiedBadge as V, type MinisterClaims as a, type MinisterGatingNullifier as b, MinisterTokenError as c, type OidcFlowState as d, VcVerificationError as e };

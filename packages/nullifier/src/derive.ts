@@ -29,6 +29,20 @@ export const FIELD = BigInt(
  * `toField` would re-hash its digits and is not the identity on field elements.
  */
 export function toField(s: string): bigint {
+  // Cross-primitive guard (M3). This Poseidon/BN254 nullifier is PERMANENTLY
+  // DISTINCT from Minister's gating nullifier (`mnv1:...`, HMAC/VOPRF,
+  // plaintext-compare, NOT circuit-usable). The two must never bridge. The
+  // TypeScript brand blocks the assignment one direction, but a branded value
+  // widens back to `string`, so `toField(badge.nullifier)` would type-check and
+  // silently produce a valid-looking field element. Reject it at runtime: a
+  // future circuit-usable credential nullifier must be a NEW construction, not a
+  // reduction of the gating tag.
+  if (/^mnv1:/.test(s)) {
+    throw new Error(
+      "toField refuses an `mnv1:` gating nullifier: it is not interchangeable with the " +
+        "Poseidon/BN254 primitive (M3). Derive a new nullifier, never bridge from mnv1.",
+    );
+  }
   let acc = 0n;
   for (const byte of new TextEncoder().encode(s)) acc = (acc * 256n + BigInt(byte)) % FIELD;
   return acc;

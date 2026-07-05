@@ -11,7 +11,7 @@ import {
   verifyMinisterBadge,
   verifyMinisterBadges,
   verifyMinisterIdToken
-} from "./chunk-AIB6IEP6.js";
+} from "./chunk-FTCBESCF.js";
 import "./chunk-R4XGCZVA.js";
 import {
   ACCOUNT_AGE_MONTHS,
