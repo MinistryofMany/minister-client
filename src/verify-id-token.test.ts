@@ -99,6 +99,33 @@ describe("verifyMinisterIdToken", () => {
     await expect(verifyMinisterIdToken(await signId({ exp: null }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk }))
       .rejects.toBeInstanceOf(MinisterTokenError);
   });
+  it("surfaces a valid sybil_bucket (3)", async () => {
+    const { publicJwk, signId } = await setup();
+    const claims = await verifyMinisterIdToken(await signId({ over: { sybil_bucket: 3 } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+    expect(claims.sybil_bucket).toBe(3);
+  });
+  it("preserves sybil_bucket 0 (0 is a real value, not dropped)", async () => {
+    const { publicJwk, signId } = await setup();
+    const claims = await verifyMinisterIdToken(await signId({ over: { sybil_bucket: 0 } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+    expect(claims.sybil_bucket).toBe(0);
+  });
+  it("omits sybil_bucket when absent", async () => {
+    const { publicJwk, signId } = await setup();
+    const claims = await verifyMinisterIdToken(await signId(), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+    expect(claims.sybil_bucket).toBeUndefined();
+  });
+  it("fails closed: out-of-range / non-integer / wrong-type sybil_bucket is omitted, never throws", async () => {
+    const { publicJwk, signId } = await setup();
+    for (const bad of [5, -1, 2.5, "3", true, null] as unknown[]) {
+      const claims = await verifyMinisterIdToken(await signId({ over: { sybil_bucket: bad } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+      expect(claims.sybil_bucket).toBeUndefined();
+    }
+  });
+  it("keeps sybil_bucket 4 (upper bound inclusive)", async () => {
+    const { publicJwk, signId } = await setup();
+    const claims = await verifyMinisterIdToken(await signId({ over: { sybil_bucket: 4 } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+    expect(claims.sybil_bucket).toBe(4);
+  });
   it("rejects a non-EdDSA (HS256) token", async () => {
     const { publicJwk } = await setup();
     const hs = await new SignJWT({ name: "Ada" })

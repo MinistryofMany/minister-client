@@ -43,6 +43,13 @@ export interface MinisterClaims {
   sub: string;
   name?: string;
   picture?: string;
+  // Minister's opt-in coarse Sybil-resistance bucket (integer 0-4),
+  // snapshotted at consent and disclosed only when the RP requested the
+  // `sybil-score` scope. Verified upstream (signed id_token) and
+  // range-validated on the way out; present ONLY when it is an integer in
+  // [0,4] (0 is a real value), otherwise undefined. Never recompute it — the
+  // score config is server-only; consume this value as-is.
+  sybil_bucket?: number;
   // The original id_token JWT, for forwarding/storage.
   raw: string;
 }

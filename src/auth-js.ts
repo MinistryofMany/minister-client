@@ -11,7 +11,9 @@ export interface MinisterProviderOptions {
   clientId: string;
   clientSecret?: string;
   issuer: string;
-  // Defaults to ["openid", "profile"]. Add badge:<type> scopes to request badges.
+  // Defaults to ["openid", "profile"]. Add badge:<type> scopes to request
+  // badges, or the standard "sybil-score" scope to receive the coarse
+  // `sybil_bucket` id_token claim (surfaced on MinisterClaims).
   scopes?: string[];
 }
 

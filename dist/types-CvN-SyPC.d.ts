@@ -30,6 +30,7 @@ interface MinisterClaims {
     sub: string;
     name?: string;
     picture?: string;
+    sybil_bucket?: number;
     raw: string;
 }
 /**

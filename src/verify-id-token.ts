@@ -62,10 +62,24 @@ export async function verifyIdTokenPayload(idToken: string, options: VerifyIdTok
 // Map a verified id_token payload to the public identity claims. Shared by
 // verifyMinisterIdToken and the flow client so the mapping lives in one place.
 export function claimsFromPayload(payload: JWTPayload, raw: string): MinisterClaims {
+  // Fail-closed range validation for the opt-in Sybil bucket. The id_token
+  // signature/issuer/audience/nonce are already verified upstream, so the
+  // value is authenticated; here we only accept an integer in [0,4] (0 is a
+  // real bucket, must survive) and OMIT anything else — non-number,
+  // non-integer, or out of range — never throwing and never coercing.
+  const rawBucket = payload["sybil_bucket"];
+  const sybil_bucket =
+    typeof rawBucket === "number" &&
+    Number.isInteger(rawBucket) &&
+    rawBucket >= 0 &&
+    rawBucket <= 4
+      ? rawBucket
+      : undefined;
   return {
     sub: payload.sub as string,
     name: typeof payload["name"] === "string" ? (payload["name"] as string) : undefined,
     picture: typeof payload["picture"] === "string" ? (payload["picture"] as string) : undefined,
+    sybil_bucket,
     raw,
   };
 }

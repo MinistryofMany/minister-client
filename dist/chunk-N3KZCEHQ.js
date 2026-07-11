@@ -277,10 +277,13 @@ async function verifyIdTokenPayload(idToken, options) {
   return payload;
 }
 function claimsFromPayload(payload, raw) {
+  const rawBucket = payload["sybil_bucket"];
+  const sybil_bucket = typeof rawBucket === "number" && Number.isInteger(rawBucket) && rawBucket >= 0 && rawBucket <= 4 ? rawBucket : void 0;
   return {
     sub: payload.sub,
     name: typeof payload["name"] === "string" ? payload["name"] : void 0,
     picture: typeof payload["picture"] === "string" ? payload["picture"] : void 0,
+    sybil_bucket,
     raw
   };
 }
@@ -355,4 +358,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-FTCBESCF.js.map
+//# sourceMappingURL=chunk-N3KZCEHQ.js.map
