@@ -8,6 +8,11 @@ import type { VerifiedBadge } from "@ministryofmany/policy";
 export interface VerifiedIdentity {
   sub: string;
   badges: VerifiedBadge[];
+  // The verified anti-sybil bucket (0-4), present ONLY when the RP requested the
+  // `sybil-score` scope, the user consented, and Minister disclosed it. The SDK
+  // range-validates it (integer 0-4) before it reaches here; undefined otherwise.
+  // Consumed as-is by the RP; NEVER recomputed (the score config is server-only).
+  sybil_bucket?: number;
 }
 
 /**
@@ -123,6 +128,9 @@ export function makeVerifier(deps: VerifierDeps) {
     }
     return {
       sub: claims.sub,
+      // Passthrough of the already-range-validated bucket from the id_token
+      // claims (undefined when the scope was not granted / not disclosed).
+      sybil_bucket: claims.sybil_bucket,
       badges: badges.map((b: VerifiedBadgeSdk) => ({
         type: b.type,
         attributes: b.claims as VerifiedBadge["attributes"],

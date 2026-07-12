@@ -112,9 +112,12 @@ export async function signIdToken(opts: {
   aud?: string;
   issuer?: string;
   nonce?: string;
+  sybil_bucket?: number;
 }): Promise<string> {
   const minister_badges = await Promise.all((opts.badges ?? []).map((b) => signVc(opts.sub, b)));
-  return new SignJWT({ nonce: opts.nonce ?? "n", minister_badges })
+  const payload: Record<string, unknown> = { nonce: opts.nonce ?? "n", minister_badges };
+  if (opts.sybil_bucket !== undefined) payload.sybil_bucket = opts.sybil_bucket;
+  return new SignJWT(payload)
     .setProtectedHeader({ alg: "EdDSA", kid: KID, typ: "JWT" })
     .setIssuer(opts.issuer ?? MOCK_ISSUER)
     .setSubject(opts.sub)

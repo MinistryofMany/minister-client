@@ -29,6 +29,18 @@ describe("makeVerifier (mock issuer)", () => {
     expect(result.badges[0]!.issuedAt).toBeGreaterThan(0);
   });
 
+  it("passes through the verified sybil_bucket, preserving 0 and omitting out-of-range/absent", async () => {
+    expect((await verify(await signIdToken({ sub: "s", sybil_bucket: 3 }))).sybil_bucket).toBe(3);
+    // 0 is a real bucket and must not be dropped.
+    expect((await verify(await signIdToken({ sub: "s", sybil_bucket: 0 }))).sybil_bucket).toBe(0);
+    // The SDK range-validates (0-4); an out-of-range value is dropped upstream.
+    expect(
+      (await verify(await signIdToken({ sub: "s", sybil_bucket: 9 }))).sybil_bucket,
+    ).toBeUndefined();
+    // Absent when the scope was not granted / not disclosed.
+    expect((await verify(await signIdToken({ sub: "s" }))).sybil_bucket).toBeUndefined();
+  });
+
   it("rejects a wrong audience", async () => {
     const idToken = await signIdToken({ sub: "s", aud: "someone-else" });
     await expect(verify(idToken)).rejects.toThrow();
