@@ -120,16 +120,9 @@ type SybilResistance = "none" | "weak" | "moderate";
 interface BadgeTypeDef {
     slug: string;
     credentialType: string;
-    scope: string;
     claims: z.ZodType<unknown>;
     sybilResistance: SybilResistance;
 }
-declare function defineBadgeType(input: {
-    slug: string;
-    credentialType: string;
-    claims: z.ZodType<unknown>;
-    sybilResistance: SybilResistance;
-}): BadgeTypeDef;
 declare const BADGE_TYPES: Record<string, BadgeTypeDef>;
 declare function slugForCredentialType(credentialType: string): string | undefined;
 
@@ -139,4 +132,4 @@ declare function badgeTypeOf(vcType: string[]): string | undefined;
 declare function getBadgeClaimSchema(slug: string): z.ZodType<unknown> | undefined;
 declare function knownBadgeTypes(): string[];
 
-export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, type AccountAgeMonths, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, type FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, type SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };
+export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, type AccountAgeMonths, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, type FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, type SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };

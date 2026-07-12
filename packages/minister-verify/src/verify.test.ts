@@ -29,14 +29,11 @@ describe("makeVerifier (mock issuer)", () => {
     expect(result.badges[0]!.issuedAt).toBeGreaterThan(0);
   });
 
-  it("passes through the verified sybil_bucket, preserving 0 and omitting out-of-range/absent", async () => {
-    expect((await verify(await signIdToken({ sub: "s", sybil_bucket: 3 }))).sybil_bucket).toBe(3);
+  it("passes through the verified sybil_bucket, preserving 0 and omitting when absent", async () => {
+    // Wrapper-level passthrough only; the full range matrix (out-of-range,
+    // non-integer, etc.) is covered in src/verify-id-token.test.ts.
     // 0 is a real bucket and must not be dropped.
     expect((await verify(await signIdToken({ sub: "s", sybil_bucket: 0 }))).sybil_bucket).toBe(0);
-    // The SDK range-validates (0-4); an out-of-range value is dropped upstream.
-    expect(
-      (await verify(await signIdToken({ sub: "s", sybil_bucket: 9 }))).sybil_bucket,
-    ).toBeUndefined();
     // Absent when the scope was not granted / not disclosed.
     expect((await verify(await signIdToken({ sub: "s" }))).sybil_bucket).toBeUndefined();
   });
@@ -52,8 +49,9 @@ describe("makeVerifier (mock issuer)", () => {
   });
 
   it("refuses to construct without an audience (fail-closed aud check)", () => {
-    // The SDK only enforces `aud` when its clientId is truthy; an empty audience
-    // would silently accept a token minted for any RP. makeVerifier must refuse.
+    // The SDK throws downstream on an empty clientId, so a missing audience
+    // never silently passes the `aud` check; makeVerifier surfaces it early at
+    // the factory boundary instead of on the first token verified.
     expect(() => makeVerifier({ issuer: MOCK_ISSUER, audience: "" })).toThrow(/audience/i);
   });
 

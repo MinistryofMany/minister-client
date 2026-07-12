@@ -1,15 +1,12 @@
-import { badgeScope } from "./badges";
 import {
   OidcCore,
   type ExchangeCodeArgs,
   type GetAuthorizationUrlArgs,
 } from "./oidc";
-import { generatePkce, randomUrlToken } from "./pkce";
 import type {
   ExchangeResult,
   KeyInput,
   MinisterClientConfig,
-  PkcePair,
 } from "./types";
 import { verifyMinisterBadge } from "./verify-badge";
 
@@ -30,16 +27,6 @@ export interface MinisterClient {
     vcJwt: string,
     options?: { key?: KeyInput },
   ): ReturnType<typeof verifyMinisterBadge>;
-
-  // PKCE S256 pair. Keep `verifier` server-side; put `challenge` in the
-  // auth URL.
-  generatePkce(): Promise<PkcePair>;
-
-  // 128-bit URL-safe random token for `state` / `nonce`.
-  randomToken(bytes?: number): string;
-
-  // Build a `badge:<slug>` scope string.
-  badgeScope(slug: string): string;
 }
 
 // Create a Minister relying-party client. `issuer` is Minister's origin
@@ -56,8 +43,5 @@ export function createMinisterClient(
     exchangeCode: (args) => core.exchangeCode(args),
     verifyMinisterBadge: (vcJwt, options) =>
       verifyMinisterBadge(vcJwt, { issuer, key: options?.key }),
-    generatePkce: () => generatePkce(),
-    randomToken: (bytes) => randomUrlToken(bytes),
-    badgeScope: (slug) => badgeScope(slug),
   };
 }

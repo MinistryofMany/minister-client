@@ -24,29 +24,17 @@ import {
 export type SybilResistance = "none" | "weak" | "moderate";
 
 // One self-describing badge type. Adding a Minister badge type to this
-// SDK is a single `defineBadgeType(...)` entry; every helper, scope, and
-// the verifier's type->slug mapping derive from BADGE_TYPES.
+// SDK is a single `ENTRIES` entry; every helper, scope (via `badgeScope`),
+// and the verifier's type->slug mapping derive from BADGE_TYPES.
 export interface BadgeTypeDef {
   // Minister badge slug, e.g. "email-domain".
   slug: string;
   // The VC `type[]` entry Minister stamps, e.g. "MinisterEmailDomainCredential".
   credentialType: string;
-  // The OIDC scope a relying party requests to ask for this badge.
-  scope: string;
   // Zod schema for the credentialSubject claims (excluding `id`).
   claims: z.ZodType<unknown>;
   // REQUIRED — mirrors Minister's per-type Sybil-resistance metadata.
   sybilResistance: SybilResistance;
-}
-
-// Build a BadgeTypeDef, deriving `scope` from the slug.
-export function defineBadgeType(input: {
-  slug: string;
-  credentialType: string;
-  claims: z.ZodType<unknown>;
-  sybilResistance: SybilResistance;
-}): BadgeTypeDef {
-  return { ...input, scope: `badge:${input.slug}` };
 }
 
 // NOTE: `credentialType` values must match Minister's @ministryofmany/shared
@@ -60,24 +48,22 @@ export function defineBadgeType(input: {
 // planned drift-check will assert this registry's (slug, sybilResistance) set
 // against @ministryofmany/shared.
 const ENTRIES: BadgeTypeDef[] = [
-  defineBadgeType({ slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims, sybilResistance: "weak" }),
-  defineBadgeType({ slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims, sybilResistance: "weak" }),
-  defineBadgeType({ slug: "oauth-account", credentialType: "MinisterOauthAccountCredential", claims: OAuthAccountClaims, sybilResistance: "weak" }),
-  defineBadgeType({ slug: "account-age", credentialType: "MinisterAccountAgeCredential", claims: AccountAgeClaims, sybilResistance: "moderate" }),
-  defineBadgeType({ slug: "social-following", credentialType: "MinisterSocialFollowingCredential", claims: SocialFollowingClaims, sybilResistance: "moderate" }),
-  defineBadgeType({ slug: "residency-country", credentialType: "MinisterResidencyCountryCredential", claims: ResidencyCountryClaims, sybilResistance: "none" }),
-  defineBadgeType({ slug: "residency-state", credentialType: "MinisterResidencyStateCredential", claims: ResidencyStateClaims, sybilResistance: "none" }),
-  defineBadgeType({ slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" }),
-  defineBadgeType({ slug: "invite-code", credentialType: "MinisterInviteCodeCredential", claims: InviteCodeClaims, sybilResistance: "none" }),
-  defineBadgeType({ slug: "tlsn-attestation", credentialType: "MinisterTlsnAttestationCredential", claims: TlsnAttestationClaims, sybilResistance: "none" }),
-  ...AGE_THRESHOLDS.map((t) =>
-    defineBadgeType({
-      slug: `age-over-${t}`,
-      credentialType: `MinisterAgeOver${t}Credential`,
-      claims: AgeOverClaimsFor(t),
-      sybilResistance: "none",
-    }),
-  ),
+  { slug: "email-domain", credentialType: "MinisterEmailDomainCredential", claims: EmailDomainClaims, sybilResistance: "weak" },
+  { slug: "email-exact", credentialType: "MinisterEmailExactCredential", claims: EmailExactClaims, sybilResistance: "weak" },
+  { slug: "oauth-account", credentialType: "MinisterOauthAccountCredential", claims: OAuthAccountClaims, sybilResistance: "weak" },
+  { slug: "account-age", credentialType: "MinisterAccountAgeCredential", claims: AccountAgeClaims, sybilResistance: "moderate" },
+  { slug: "social-following", credentialType: "MinisterSocialFollowingCredential", claims: SocialFollowingClaims, sybilResistance: "moderate" },
+  { slug: "residency-country", credentialType: "MinisterResidencyCountryCredential", claims: ResidencyCountryClaims, sybilResistance: "none" },
+  { slug: "residency-state", credentialType: "MinisterResidencyStateCredential", claims: ResidencyStateClaims, sybilResistance: "none" },
+  { slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" },
+  { slug: "invite-code", credentialType: "MinisterInviteCodeCredential", claims: InviteCodeClaims, sybilResistance: "none" },
+  { slug: "tlsn-attestation", credentialType: "MinisterTlsnAttestationCredential", claims: TlsnAttestationClaims, sybilResistance: "none" },
+  ...AGE_THRESHOLDS.map((t) => ({
+    slug: `age-over-${t}`,
+    credentialType: `MinisterAgeOver${t}Credential`,
+    claims: AgeOverClaimsFor(t),
+    sybilResistance: "none" as const,
+  })),
 ];
 
 // slug -> def

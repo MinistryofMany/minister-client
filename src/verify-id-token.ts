@@ -89,8 +89,3 @@ export async function verifyMinisterIdToken(idToken: string, options: VerifyIdTo
   const payload = await verifyIdTokenPayload(idToken, options);
   return claimsFromPayload(payload, idToken);
 }
-
-export function _resetIdTokenJwksCache(issuer?: string): void {
-  if (issuer) jwksCache.delete(issuer.replace(/\/$/, ""));
-  else jwksCache.clear();
-}

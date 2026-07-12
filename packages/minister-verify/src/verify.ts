@@ -91,12 +91,12 @@ function issuedAtFromIssuanceMonth(issuanceMonth: string | undefined): number {
  * signature / issuer / audience / expiry.
  */
 export function makeVerifier(deps: VerifierDeps) {
-  // Fail-closed audience. `@ministryofmany/client` only enforces the id_token `aud`
-  // when its `clientId` is truthy - it builds the underlying `jose` verify
-  // options as `...clientId ? { audience: clientId } : {}`, so an
-  // empty/undefined audience would SILENTLY SKIP the `aud` check and accept a
-  // token minted for any other RP. Guard here so this reusable factory can
-  // never be constructed without an expected audience regardless of caller.
+  // Fail-closed audience, surfaced early. `@ministryofmany/client` already
+  // refuses an empty `clientId`: it throws downstream on both paths
+  // (verify-id-token.ts and verify-badges.ts), so a missing audience can never
+  // silently pass the `aud` check. This construction-time guard is a clearer,
+  // earlier failure at the factory boundary so a caller learns the audience is
+  // required when it wires up the verifier, not on the first token it verifies.
   if (!deps.audience) {
     throw new Error("makeVerifier: a non-empty `audience` (client id) is required");
   }

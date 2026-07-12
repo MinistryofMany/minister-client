@@ -19,11 +19,10 @@ import {
   badgeScope,
   badgeScopes,
   badgeTypeOf,
-  defineBadgeType,
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "../chunk-JS6T4O33.js";
+} from "../chunk-KOYZMUKO.js";
 export {
   ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
@@ -44,7 +43,6 @@ export {
   badgeScope,
   badgeScopes,
   badgeTypeOf,
-  defineBadgeType,
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType

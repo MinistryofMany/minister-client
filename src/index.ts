@@ -6,7 +6,7 @@ export { createMinisterClient } from "./client";
 export type { MinisterClient } from "./client";
 export type { GetAuthorizationUrlArgs, ExchangeCodeArgs } from "./oidc";
 export { generatePkce, randomUrlToken } from "./pkce";
-export { buildDid, didFromIssuer, buildPairwiseSubjectDid, parsePairwiseSubjectDid } from "./did";
+export { buildDid, didFromIssuer, buildPairwiseSubjectDid } from "./did";
 
 // Verification layer
 export { createMinisterVerifier } from "./verifier";

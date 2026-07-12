@@ -1,7 +1,7 @@
-import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, P as PkcePair, M as MinisterClientConfig, a as MinisterClaims, B as BadgesResult } from './types-CvN-SyPC.js';
+import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, M as MinisterClientConfig, P as PkcePair, a as MinisterClaims, B as BadgesResult } from './types-CvN-SyPC.js';
 export { b as MinisterGatingNullifier, c as MinisterTokenError, O as OidcError, d as OidcFlowState, R as RejectedBadge, e as VcVerificationError } from './types-CvN-SyPC.js';
 import { JWTPayload } from 'jose';
-export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, defineBadgeType, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
+export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
 import 'zod';
 
 interface GetAuthorizationUrlArgs {
@@ -31,9 +31,6 @@ interface MinisterClient {
     verifyMinisterBadge(vcJwt: string, options?: {
         key?: KeyInput;
     }): ReturnType<typeof verifyMinisterBadge>;
-    generatePkce(): Promise<PkcePair>;
-    randomToken(bytes?: number): string;
-    badgeScope(slug: string): string;
 }
 declare function createMinisterClient(config: MinisterClientConfig): MinisterClient;
 
@@ -43,10 +40,6 @@ declare function randomUrlToken(bytes?: number): string;
 declare function buildDid(domain: string): string;
 declare function didFromIssuer(issuer: string): string;
 declare function buildPairwiseSubjectDid(issuer: string, sub: string): string;
-declare function parsePairwiseSubjectDid(subject: string): {
-    issuerDid: string;
-    sub: string;
-} | null;
 
 interface MinisterVerifierConfig {
     issuer: string;
@@ -77,4 +70,4 @@ interface VerifyBadgesOptions {
 }
 declare function verifyMinisterBadges(tokenOrPayload: string | JWTPayload, options: VerifyBadgesOptions): Promise<BadgesResult>;
 
-export { BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterVerifier, didFromIssuer, generatePkce, parsePairwiseSubjectDid, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };
+export { BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };

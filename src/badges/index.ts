@@ -12,6 +12,6 @@
 // credentialType, sybilResistance, and schema shape) against a frozen
 // transcription of `@ministryofmany/shared` — update both in lockstep.
 export * from "./schemas";
-export { BADGE_TYPES, defineBadgeType, slugForCredentialType } from "./registry";
+export { BADGE_TYPES, slugForCredentialType } from "./registry";
 export type { BadgeTypeDef, SybilResistance } from "./registry";
 export { badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes } from "./helpers";

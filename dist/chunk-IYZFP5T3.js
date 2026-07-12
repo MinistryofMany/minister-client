@@ -1,7 +1,7 @@
 import {
   badgeTypeOf,
   getBadgeClaimSchema
-} from "./chunk-JS6T4O33.js";
+} from "./chunk-KOYZMUKO.js";
 
 // src/did.ts
 function buildDid(domain) {
@@ -22,15 +22,6 @@ function didFromIssuer(issuer) {
 }
 function buildPairwiseSubjectDid(issuer, sub) {
   return `${didFromIssuer(issuer)}:u:${sub}`;
-}
-function parsePairwiseSubjectDid(subject) {
-  const marker = ":u:";
-  const idx = subject.lastIndexOf(marker);
-  if (idx <= 0) return null;
-  const issuerDid = subject.slice(0, idx);
-  const sub = subject.slice(idx + marker.length);
-  if (!issuerDid.startsWith("did:web:") || sub.length === 0 || sub.includes(":")) return null;
-  return { issuerDid, sub };
 }
 
 // src/errors.ts
@@ -348,7 +339,6 @@ export {
   buildDid,
   didFromIssuer,
   buildPairwiseSubjectDid,
-  parsePairwiseSubjectDid,
   VcVerificationError,
   OidcError,
   MinisterTokenError,
@@ -358,4 +348,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-N3KZCEHQ.js.map
+//# sourceMappingURL=chunk-IYZFP5T3.js.map

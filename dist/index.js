@@ -6,12 +6,11 @@ import {
   buildPairwiseSubjectDid,
   claimsFromPayload,
   didFromIssuer,
-  parsePairwiseSubjectDid,
   verifyIdTokenPayload,
   verifyMinisterBadge,
   verifyMinisterBadges,
   verifyMinisterIdToken
-} from "./chunk-N3KZCEHQ.js";
+} from "./chunk-IYZFP5T3.js";
 import "./chunk-R4XGCZVA.js";
 import {
   ACCOUNT_AGE_MONTHS,
@@ -33,11 +32,10 @@ import {
   badgeScope,
   badgeScopes,
   badgeTypeOf,
-  defineBadgeType,
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "./chunk-JS6T4O33.js";
+} from "./chunk-KOYZMUKO.js";
 
 // src/oidc.ts
 import { createRemoteJWKSet } from "jose";
@@ -153,6 +151,17 @@ var OidcCore = class {
   }
 };
 
+// src/client.ts
+function createMinisterClient(config) {
+  const core = new OidcCore(config);
+  const issuer = config.issuer.replace(/\/$/, "");
+  return {
+    getAuthorizationUrl: (args) => core.getAuthorizationUrl(args),
+    exchangeCode: (args) => core.exchangeCode(args),
+    verifyMinisterBadge: (vcJwt, options) => verifyMinisterBadge(vcJwt, { issuer, key: options?.key })
+  };
+}
+
 // src/pkce.ts
 function b64url(bytes) {
   let str = "";
@@ -176,20 +185,6 @@ async function generatePkce() {
 }
 function randomUrlToken(bytes = 16) {
   return b64url(randomBytes(bytes));
-}
-
-// src/client.ts
-function createMinisterClient(config) {
-  const core = new OidcCore(config);
-  const issuer = config.issuer.replace(/\/$/, "");
-  return {
-    getAuthorizationUrl: (args) => core.getAuthorizationUrl(args),
-    exchangeCode: (args) => core.exchangeCode(args),
-    verifyMinisterBadge: (vcJwt, options) => verifyMinisterBadge(vcJwt, { issuer, key: options?.key }),
-    generatePkce: () => generatePkce(),
-    randomToken: (bytes) => randomUrlToken(bytes),
-    badgeScope: (slug) => badgeScope(slug)
-  };
 }
 
 // src/verifier.ts
@@ -228,12 +223,10 @@ export {
   buildPairwiseSubjectDid,
   createMinisterClient,
   createMinisterVerifier,
-  defineBadgeType,
   didFromIssuer,
   generatePkce,
   getBadgeClaimSchema,
   knownBadgeTypes,
-  parsePairwiseSubjectDid,
   randomUrlToken,
   slugForCredentialType,
   verifyMinisterBadge,

@@ -39,19 +39,3 @@ export function didFromIssuer(issuer: string): string {
 export function buildPairwiseSubjectDid(issuer: string, sub: string): string {
   return `${didFromIssuer(issuer)}:u:${sub}`;
 }
-
-// Parse a pairwise subject DID back into { issuerDid, sub }, or null when it
-// does not match the `did:web:<...>:u:<sub>` shape. Explicit `:u:` handling —
-// <sub> must be a single, non-empty, colon-free trailing segment — so this is
-// total and never silently mis-splits a path-bearing DID.
-export function parsePairwiseSubjectDid(
-  subject: string,
-): { issuerDid: string; sub: string } | null {
-  const marker = ":u:";
-  const idx = subject.lastIndexOf(marker);
-  if (idx <= 0) return null;
-  const issuerDid = subject.slice(0, idx);
-  const sub = subject.slice(idx + marker.length);
-  if (!issuerDid.startsWith("did:web:") || sub.length === 0 || sub.includes(":")) return null;
-  return { issuerDid, sub };
-}

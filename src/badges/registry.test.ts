@@ -1,19 +1,8 @@
 // src/badges/registry.test.ts
 import { describe, expect, it } from "vitest";
-import { BADGE_TYPES, defineBadgeType, slugForCredentialType } from "./registry";
-import { z } from "zod";
+import { BADGE_TYPES, slugForCredentialType } from "./registry";
 
 describe("badge registry", () => {
-  it("defineBadgeType derives the scope from the slug", () => {
-    const def = defineBadgeType({
-      slug: "x-test",
-      credentialType: "MinisterXTestCredential",
-      claims: z.object({}),
-      sybilResistance: "none",
-    });
-    expect(def.scope).toBe("badge:x-test");
-  });
-
   it("carries a sybilResistance value for every registered type", () => {
     for (const def of Object.values(BADGE_TYPES)) {
       expect(["none", "weak", "moderate"]).toContain(def.sybilResistance);
@@ -40,7 +29,6 @@ describe("badge registry", () => {
   it("registers email-domain with its credentialType and schema", () => {
     const def = BADGE_TYPES["email-domain"];
     expect(def?.credentialType).toBe("MinisterEmailDomainCredential");
-    expect(def?.scope).toBe("badge:email-domain");
     expect(def?.claims.parse({ domain: "a.com" })).toEqual({ domain: "a.com" });
   });
   it("registers every age threshold", () => {
