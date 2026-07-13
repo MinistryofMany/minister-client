@@ -1,5 +1,5 @@
-import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, M as MinisterClientConfig, P as PkcePair, a as MinisterClaims, B as BadgesResult } from './types-CvN-SyPC.js';
-export { b as MinisterGatingNullifier, c as MinisterTokenError, O as OidcError, d as OidcFlowState, R as RejectedBadge, e as VcVerificationError } from './types-CvN-SyPC.js';
+import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, M as MinisterClientConfig, P as PkcePair, a as MinisterClaims, B as BadgesResult, b as BadgeStatusRef, S as StatusCheck } from './types-4FLblnJS.js';
+export { c as MinisterGatingNullifier, d as MinisterTokenError, O as OidcError, e as OidcFlowState, R as RejectedBadge, f as StatusListSnapshot, g as VcVerificationError, p as parseCredentialStatus, v as verifyStatusListCredential } from './types-4FLblnJS.js';
 import { JWTPayload } from 'jose';
 export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
 import 'zod';
@@ -70,4 +70,25 @@ interface VerifyBadgesOptions {
 }
 declare function verifyMinisterBadges(tokenOrPayload: string | JWTPayload, options: VerifyBadgesOptions): Promise<BadgesResult>;
 
-export { BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };
+type StaleFailMode = "open" | "closed";
+interface HighWaterStore {
+    get(listUri: string): number | undefined | Promise<number | undefined>;
+    set(listUri: string, version: number): void | Promise<void>;
+}
+interface MinisterStatusCheckerConfig {
+    issuer: string;
+    pollIntervalMs?: number;
+    maxStaleMs?: number;
+    staleFailMode?: StaleFailMode;
+    key?: KeyInput;
+    persistHighWater?: HighWaterStore;
+    fetchImpl?: typeof fetch;
+    nowFn?: () => number;
+}
+interface MinisterStatusChecker {
+    check(ref: BadgeStatusRef): Promise<StatusCheck>;
+    isLatched(ref: BadgeStatusRef): boolean;
+}
+declare function createMinisterStatusChecker(config: MinisterStatusCheckerConfig): MinisterStatusChecker;
+
+export { BadgeStatusRef, BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, type HighWaterStore, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterStatusChecker, type MinisterStatusCheckerConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, type StaleFailMode, StatusCheck, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterStatusChecker, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };

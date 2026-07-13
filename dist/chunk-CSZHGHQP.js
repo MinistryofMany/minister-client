@@ -44,9 +44,6 @@ var MinisterTokenError = class extends Error {
   }
 };
 
-// src/verify-badge.ts
-import { importJWK as importJWK2 } from "jose";
-
 // src/jwt.ts
 import {
   importJWK,
@@ -63,8 +60,129 @@ async function verifyJwt(jwt, key, options) {
   return jwtVerify(jwt, resolved, options);
 }
 
-// src/verify-badge.ts
-var NULLIFIER_RE = /^mnv1:[A-Za-z0-9_-]{20,64}$/;
+// src/status-list.ts
+var MAX_STATUS_INDEX = 1 << 20;
+function parseCredentialStatus(rawStatus, expectedIssuerOrigin) {
+  if (rawStatus === void 0 || rawStatus === null) return void 0;
+  if (typeof rawStatus !== "object" || Array.isArray(rawStatus)) {
+    throw new VcVerificationError("VC `credentialStatus` is not an object");
+  }
+  const s = rawStatus;
+  if (s.type !== "BitstringStatusListEntry") {
+    throw new VcVerificationError(
+      `VC credentialStatus.type must be BitstringStatusListEntry (got ${String(s.type)})`
+    );
+  }
+  if (s.statusPurpose !== "revocation") {
+    throw new VcVerificationError(
+      `VC credentialStatus.statusPurpose must be "revocation" (got ${String(s.statusPurpose)})`
+    );
+  }
+  const uri = s.statusListCredential;
+  if (typeof uri !== "string" || uri.length === 0) {
+    throw new VcVerificationError("VC credentialStatus.statusListCredential missing");
+  }
+  let listUrl;
+  try {
+    listUrl = new URL(uri);
+  } catch {
+    throw new VcVerificationError("VC credentialStatus.statusListCredential is not a URL");
+  }
+  const expected = new URL(expectedIssuerOrigin.replace(/\/$/, ""));
+  if (listUrl.protocol !== "https:" && listUrl.hostname !== "localhost") {
+    throw new VcVerificationError("VC credentialStatus list URL must be https");
+  }
+  if (listUrl.origin !== expected.origin) {
+    throw new VcVerificationError(
+      `VC credentialStatus list URL origin ${listUrl.origin} is not the configured issuer ${expected.origin}`
+    );
+  }
+  const rawIndex = s.statusListIndex;
+  const index = typeof rawIndex === "string" ? Number(rawIndex) : rawIndex;
+  if (typeof index !== "number" || !Number.isInteger(index) || index < 0 || index >= MAX_STATUS_INDEX) {
+    throw new VcVerificationError(
+      `VC credentialStatus.statusListIndex out of range: ${String(rawIndex)}`
+    );
+  }
+  return { uri, index };
+}
+function bitIsSet(bytes, index) {
+  const byte = bytes[index >> 3] ?? 0;
+  return (byte & 128 >> (index & 7)) !== 0;
+}
+function base64urlToBytes(s) {
+  const b64 = s.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = b64 + "=".repeat((4 - b64.length % 4) % 4);
+  const bin = atob(padded);
+  const out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function gunzip(bytes) {
+  const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+  const buf = await new Response(stream).arrayBuffer();
+  return new Uint8Array(buf);
+}
+async function decodeEncodedList(encodedList) {
+  if (typeof encodedList !== "string" || encodedList.length < 1 || encodedList[0] !== "u") {
+    throw new VcVerificationError("status list encodedList is not multibase base64url ('u')");
+  }
+  return gunzip(base64urlToBytes(encodedList.slice(1)));
+}
+var DEFAULT_CLOCK_TOLERANCE_SEC = 30;
+async function verifyStatusListCredential(jwt, opts) {
+  const expectedIss = didFromIssuer(opts.issuer);
+  const fetchedUrl = opts.fetchedUrl.replace(/\/$/, "");
+  let payload;
+  try {
+    const result = await verifyJwt(jwt, opts.key, {
+      issuer: expectedIss,
+      algorithms: ["EdDSA"],
+      typ: "vc+jwt",
+      requiredClaims: ["exp", "sub"],
+      clockTolerance: opts.clockToleranceSec ?? DEFAULT_CLOCK_TOLERANCE_SEC
+      // Enforce max-age against the signed exp ourselves below too, but jose
+      // already rejects an expired token here (defense 2).
+    });
+    payload = result.payload;
+  } catch (cause) {
+    throw new VcVerificationError(
+      `status list verification failed: ${cause instanceof Error ? cause.message : String(cause)}`
+    );
+  }
+  if (typeof payload.sub !== "string" || payload.sub.replace(/\/$/, "") !== fetchedUrl) {
+    throw new VcVerificationError(
+      `status list sub (${String(payload.sub)}) does not match fetched URL ${fetchedUrl}`
+    );
+  }
+  const version = payload.statusListVersion;
+  if (typeof version !== "number" || !Number.isInteger(version)) {
+    throw new VcVerificationError("status list has no integer statusListVersion");
+  }
+  const vc = payload.vc;
+  if (!vc || typeof vc !== "object") {
+    throw new VcVerificationError("status list payload missing `vc` envelope");
+  }
+  if (!Array.isArray(vc.type) || !vc.type.includes("BitstringStatusListCredential")) {
+    throw new VcVerificationError("status list vc.type must include BitstringStatusListCredential");
+  }
+  const cs = vc.credentialSubject;
+  if (!cs || typeof cs !== "object") {
+    throw new VcVerificationError("status list missing credentialSubject");
+  }
+  if (cs.statusPurpose !== "revocation") {
+    throw new VcVerificationError("status list statusPurpose must be revocation");
+  }
+  if (typeof cs.encodedList !== "string") {
+    throw new VcVerificationError("status list missing encodedList");
+  }
+  const bits = await decodeEncodedList(cs.encodedList);
+  const expiresAtMs = typeof payload.exp === "number" ? payload.exp * 1e3 : 0;
+  return { bits, version, expiresAtMs };
+}
+
+// src/did-assertion.ts
+import { importJWK as importJWK2 } from "jose";
 var didResolverCache = /* @__PURE__ */ new Map();
 function assertionResolverFor(issuer) {
   let resolver = didResolverCache.get(issuer);
@@ -128,17 +246,18 @@ function createDidAssertionResolver(issuer) {
     const keys = await load();
     const kid = protectedHeader.kid;
     if (typeof kid !== "string" || kid.length === 0) {
-      throw new Error("badge JWT has no `kid`; cannot pin to DID assertionMethod");
+      throw new Error("JWT has no `kid`; cannot pin to DID assertionMethod");
     }
     const key = keys.get(kid);
     if (!key) {
-      throw new Error(
-        `badge kid (${kid}) is not in the issuer DID document assertionMethod`
-      );
+      throw new Error(`kid (${kid}) is not in the issuer DID document assertionMethod`);
     }
     return key;
   };
 }
+
+// src/verify-badge.ts
+var NULLIFIER_RE = /^mnv1:[A-Za-z0-9_-]{20,64}$/;
 async function verifyMinisterBadge(vcJwt, options) {
   const issuer = options.issuer.replace(/\/$/, "");
   const expectedIss = didFromIssuer(issuer);
@@ -219,12 +338,21 @@ async function verifyMinisterBadge(vcJwt, options) {
       `Badge ${slug} claims failed validation: ${cause instanceof Error ? cause.message : String(cause)}`
     );
   }
+  let status;
+  try {
+    status = parseCredentialStatus(vc.credentialStatus, issuer);
+  } catch (cause) {
+    throw new VcVerificationError(
+      cause instanceof Error ? cause.message : String(cause)
+    );
+  }
   return {
     type: slug,
     claims,
     subject: payload.sub,
     ...issuanceMonth !== void 0 ? { issuanceMonth } : {},
     ...nullifier !== void 0 ? { nullifier } : {},
+    ...status !== void 0 ? { status } : {},
     raw: vcJwt
   };
 }
@@ -339,13 +467,17 @@ export {
   buildDid,
   didFromIssuer,
   buildPairwiseSubjectDid,
+  assertionResolverFor,
   VcVerificationError,
   OidcError,
   MinisterTokenError,
+  parseCredentialStatus,
+  bitIsSet,
+  verifyStatusListCredential,
   verifyMinisterBadge,
   verifyIdTokenPayload,
   claimsFromPayload,
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-IYZFP5T3.js.map
+//# sourceMappingURL=chunk-CSZHGHQP.js.map

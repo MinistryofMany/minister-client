@@ -18,6 +18,17 @@ export type { VerifyBadgesOptions } from "./verify-badges";
 export { verifyMinisterBadge } from "./verify-badge";
 export type { VerifyBadgeOptions } from "./verify-badge";
 
+// Revocation: status-list checker + shape (docs/groups-revocation-design.md §5.8)
+export { createMinisterStatusChecker } from "./status-checker";
+export type {
+  MinisterStatusChecker,
+  MinisterStatusCheckerConfig,
+  StaleFailMode,
+  HighWaterStore,
+} from "./status-checker";
+export { parseCredentialStatus, verifyStatusListCredential } from "./status-list";
+export type { BadgeStatusRef, StatusCheck, StatusListSnapshot } from "./status-list";
+
 // Errors
 export { VcVerificationError, OidcError, MinisterTokenError } from "./errors";
 

@@ -10,6 +10,27 @@ declare class MinisterTokenError extends Error {
     constructor(message: string);
 }
 
+interface BadgeStatusRef {
+    uri: string;
+    index: number;
+}
+type StatusCheck = "valid" | "revoked" | "stale";
+declare function parseCredentialStatus(rawStatus: unknown, expectedIssuerOrigin: string): BadgeStatusRef | undefined;
+interface StatusListSnapshot {
+    bits: Uint8Array;
+    version: number;
+    expiresAtMs: number;
+    etag?: string;
+}
+interface VerifyStatusListOptions {
+    fetchedUrl: string;
+    issuer: string;
+    key: KeyInput;
+    clockToleranceSec?: number;
+    nowMs?: number;
+}
+declare function verifyStatusListCredential(jwt: string, opts: VerifyStatusListOptions): Promise<StatusListSnapshot>;
+
 interface MinisterClientConfig {
     issuer: string;
     clientId: string;
@@ -92,6 +113,7 @@ interface VerifiedBadge {
     subject: string;
     issuanceMonth?: string;
     nullifier?: MinisterGatingNullifier;
+    status?: BadgeStatusRef;
     raw: string;
 }
 interface RejectedBadge {
@@ -109,4 +131,4 @@ interface ExchangeResult {
 }
 type KeyInput = KeyLike | JWK | Uint8Array | JWTVerifyGetKey;
 
-export { type BadgesResult as B, type ExchangeResult as E, type KeyInput as K, type MinisterClientConfig as M, OidcError as O, type PkcePair as P, type RejectedBadge as R, type VerifiedBadge as V, type MinisterClaims as a, type MinisterGatingNullifier as b, MinisterTokenError as c, type OidcFlowState as d, VcVerificationError as e };
+export { type BadgesResult as B, type ExchangeResult as E, type KeyInput as K, type MinisterClientConfig as M, OidcError as O, type PkcePair as P, type RejectedBadge as R, type StatusCheck as S, type VerifiedBadge as V, type MinisterClaims as a, type BadgeStatusRef as b, type MinisterGatingNullifier as c, MinisterTokenError as d, type OidcFlowState as e, type StatusListSnapshot as f, VcVerificationError as g, parseCredentialStatus as p, verifyStatusListCredential as v };

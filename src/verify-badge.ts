@@ -1,9 +1,9 @@
-import { importJWK, type JWK, type JWTVerifyGetKey, type KeyLike } from "jose";
-
 import { badgeTypeOf, getBadgeClaimSchema } from "./badges/helpers";
 import { didFromIssuer } from "./did";
+import { assertionResolverFor, _resetAssertionCache } from "./did-assertion";
 import { verifyJwt } from "./jwt";
 import { VcVerificationError } from "./errors";
+import { parseCredentialStatus, type BadgeStatusRef } from "./status-list";
 import type { KeyInput, MinisterGatingNullifier, VerifiedBadge } from "./types";
 
 // The disclosed per-RP Sybil nullifier is version-prefixed `mnv1:` followed by
@@ -22,121 +22,8 @@ const NULLIFIER_RE = /^mnv1:[A-Za-z0-9_-]{20,64}$/;
 // carrying the private key), an RP only ever holds public material.
 //
 // Badge keys are pinned to the issuer's DID document `assertionMethod` — NOT the
-// raw JWKS. Minister's JWKS at /.well-known/jwks.json serves BOTH the badge
-// signing key (#key-2) AND the in-process token key (#key-3); jose selects a key
-// by the JWT `kid`, so verifying a badge against the full JWKS would accept a VC
-// carrying `kid ...#key-3` — i.e. one forged with a stolen token key — defeating
-// the KMS split. The DID document's `assertionMethod` lists ONLY #key-2, so we
-// resolve badge keys from it and REJECT any `kid` not listed there. That keeps
-// the token key from ever attesting a badge.
-
-// did:web DID document, restricted to the fields we consume.
-interface DidVerificationMethod {
-  id?: unknown;
-  publicKeyJwk?: unknown;
-}
-interface DidDocumentShape {
-  verificationMethod?: unknown;
-  assertionMethod?: unknown;
-}
-
-// Cache one assertionMethod key resolver per issuer for the process lifetime.
-// Cache key is the trusted RP-config issuer (not request input), so this stays
-// bounded. Each resolver memoizes the fetched-and-imported key map internally and
-// clears it on failure, so a transient did.json fetch error self-heals on the
-// next call rather than permanently wedging badge verification.
-const didResolverCache = new Map<string, JWTVerifyGetKey>();
-
-function assertionResolverFor(issuer: string): JWTVerifyGetKey {
-  let resolver = didResolverCache.get(issuer);
-  if (!resolver) {
-    resolver = createDidAssertionResolver(issuer);
-    didResolverCache.set(issuer, resolver);
-  }
-  return resolver;
-}
-
-// Fetch <issuer>/.well-known/did.json and build a `kid -> public key` map from
-// its `assertionMethod` — the ONLY keys allowed to verify a badge VC.
-async function loadAssertionKeys(
-  issuer: string,
-): Promise<Map<string, KeyLike | Uint8Array>> {
-  const url = `${issuer}/.well-known/did.json`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`DID document fetch failed (${res.status}) for ${url}`);
-  }
-  const doc = (await res.json()) as DidDocumentShape;
-
-  const vms = Array.isArray(doc.verificationMethod) ? doc.verificationMethod : [];
-  const byId = new Map<string, DidVerificationMethod>();
-  for (const vm of vms) {
-    if (
-      vm &&
-      typeof vm === "object" &&
-      typeof (vm as DidVerificationMethod).id === "string"
-    ) {
-      byId.set((vm as DidVerificationMethod).id as string, vm as DidVerificationMethod);
-    }
-  }
-
-  const assertion = Array.isArray(doc.assertionMethod) ? doc.assertionMethod : [];
-  if (assertion.length === 0) {
-    throw new Error("DID document has no `assertionMethod` entries");
-  }
-
-  const map = new Map<string, KeyLike | Uint8Array>();
-  for (const entry of assertion) {
-    // Per W3C, an assertionMethod entry is either a string reference to a
-    // verificationMethod `id` or an embedded verification method object.
-    let vm: DidVerificationMethod | undefined;
-    if (typeof entry === "string") {
-      vm = byId.get(entry);
-    } else if (entry && typeof entry === "object") {
-      vm = entry as DidVerificationMethod;
-    }
-    const kid = vm && typeof vm.id === "string" ? vm.id : undefined;
-    const jwk = vm?.publicKeyJwk;
-    if (!kid || !jwk || typeof jwk !== "object") {
-      throw new Error(
-        `assertionMethod entry has no resolvable publicKeyJwk: ${String(
-          typeof entry === "string" ? entry : (vm?.id ?? "<embedded>"),
-        )}`,
-      );
-    }
-    map.set(kid, await importJWK(jwk as JWK, "EdDSA"));
-  }
-  return map;
-}
-
-function createDidAssertionResolver(issuer: string): JWTVerifyGetKey {
-  let keysPromise: Promise<Map<string, KeyLike | Uint8Array>> | undefined;
-  const load = () => {
-    if (!keysPromise) {
-      // Don't cache a REJECTED fetch: a transient did.json outage would
-      // otherwise wedge badge verification for the process lifetime.
-      keysPromise = loadAssertionKeys(issuer).catch((err) => {
-        keysPromise = undefined;
-        throw err;
-      });
-    }
-    return keysPromise;
-  };
-  return async (protectedHeader) => {
-    const keys = await load();
-    const kid = protectedHeader.kid;
-    if (typeof kid !== "string" || kid.length === 0) {
-      throw new Error("badge JWT has no `kid`; cannot pin to DID assertionMethod");
-    }
-    const key = keys.get(kid);
-    if (!key) {
-      throw new Error(
-        `badge kid (${kid}) is not in the issuer DID document assertionMethod`,
-      );
-    }
-    return key;
-  };
-}
+// raw JWKS (see did-assertion.ts for the full KMS-split rationale). The token key
+// (#key-3) is never in `assertionMethod`, so it can never attest a badge.
 
 export interface VerifyBadgeOptions {
   // Minister origin, e.g. "https://ministry.id".
@@ -288,19 +175,34 @@ export async function verifyMinisterBadge(
     );
   }
 
+  // Revocation (§5.8): parse `vc.credentialStatus` when present. It lives at the
+  // `vc` level (sibling of credentialSubject), so it never touched the per-type
+  // schema parse above. Strict shape check (type, purpose, https URL pinned to
+  // the configured issuer origin, integer index); MALFORMED => fail the badge
+  // closed (issuer drift, same posture as a malformed nullifier). Absent => the
+  // badge simply carries no `status` (non-revocable, or a pre-revocation issuer).
+  let status: BadgeStatusRef | undefined;
+  try {
+    status = parseCredentialStatus((vc as { credentialStatus?: unknown }).credentialStatus, issuer);
+  } catch (cause) {
+    throw new VcVerificationError(
+      cause instanceof Error ? cause.message : String(cause),
+    );
+  }
+
   return {
     type: slug,
     claims,
     subject: payload.sub,
     ...(issuanceMonth !== undefined ? { issuanceMonth } : {}),
     ...(nullifier !== undefined ? { nullifier } : {}),
+    ...(status !== undefined ? { status } : {}),
     raw: vcJwt,
   };
 }
 
 // Test seam: drop the cached DID assertionMethod key resolver for an issuer (or
-// all issuers).
+// all issuers). Re-exported for back-compat; the cache now lives in did-assertion.
 export function _resetBadgeKeyCache(issuer?: string): void {
-  if (issuer) didResolverCache.delete(issuer.replace(/\/$/, ""));
-  else didResolverCache.clear();
+  _resetAssertionCache(issuer);
 }

@@ -1,5 +1,6 @@
 import type { JWK, JWTVerifyGetKey, KeyLike } from "jose";
 import type { VcVerificationError } from "./errors";
+import type { BadgeStatusRef } from "./status-list";
 
 // Configuration for a Minister relying-party client.
 export interface MinisterClientConfig {
@@ -152,6 +153,13 @@ export interface VerifiedBadge {
   // and any pre-M5 disclosure). Present-but-malformed (`!^mnv1:[A-Za-z0-9_-]+$`)
   // fails the badge closed, like `issuanceMonth`.
   nullifier?: MinisterGatingNullifier;
+  // Revocation handle (W3C BitstringStatusListEntry, §5.8), when the badge is
+  // revocable. `{ uri, index }` points at Minister's per-RP status list. Persist
+  // it next to any DURABLE entitlement you grant from this badge and sweep it
+  // with `createMinisterStatusChecker(...).check(status)`; on "revoked" drop the
+  // entitlement. Undefined for a non-revocable badge (or a pre-revocation issuer).
+  // Present-but-malformed fails the badge closed, like `nullifier`.
+  status?: BadgeStatusRef;
   // The original VC JWT, for storage or forwarding.
   raw: string;
 }

@@ -2,15 +2,19 @@ import {
   MinisterTokenError,
   OidcError,
   VcVerificationError,
+  assertionResolverFor,
+  bitIsSet,
   buildDid,
   buildPairwiseSubjectDid,
   claimsFromPayload,
   didFromIssuer,
+  parseCredentialStatus,
   verifyIdTokenPayload,
   verifyMinisterBadge,
   verifyMinisterBadges,
-  verifyMinisterIdToken
-} from "./chunk-IYZFP5T3.js";
+  verifyMinisterIdToken,
+  verifyStatusListCredential
+} from "./chunk-CSZHGHQP.js";
 import "./chunk-R4XGCZVA.js";
 import {
   ACCOUNT_AGE_MONTHS,
@@ -196,6 +200,101 @@ function createMinisterVerifier(config) {
     verifyBadge: (vcJwt) => verifyMinisterBadge(vcJwt, { issuer, key: jwks })
   };
 }
+
+// src/status-checker.ts
+var DEFAULT_POLL_INTERVAL_MS = 6e4;
+function latchKey(ref) {
+  return `${ref.uri.replace(/\/$/, "")}#${ref.index}`;
+}
+function createMinisterStatusChecker(config) {
+  const issuer = config.issuer.replace(/\/$/, "");
+  const pollIntervalMs = config.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
+  const maxStaleMs = config.maxStaleMs ?? Number.POSITIVE_INFINITY;
+  const staleFailMode = config.staleFailMode ?? "open";
+  const key = config.key ?? assertionResolverFor(issuer);
+  const fetchImpl = config.fetchImpl ?? fetch;
+  const now = config.nowFn ?? Date.now;
+  const cache = /* @__PURE__ */ new Map();
+  const inflight = /* @__PURE__ */ new Map();
+  const memHighWater = /* @__PURE__ */ new Map();
+  const latch = /* @__PURE__ */ new Set();
+  async function getHighWater(uri) {
+    if (config.persistHighWater) {
+      const v = await config.persistHighWater.get(uri);
+      if (typeof v === "number") return v;
+    }
+    return memHighWater.get(uri) ?? -1;
+  }
+  async function setHighWater(uri, version) {
+    memHighWater.set(uri, version);
+    if (config.persistHighWater) await config.persistHighWater.set(uri, version);
+  }
+  async function refetch(uri) {
+    const existing = cache.get(uri);
+    try {
+      const headers = {};
+      if (existing?.etag) headers["If-None-Match"] = existing.etag;
+      const res = await fetchImpl(uri, { headers });
+      if (res.status === 304 && existing) {
+        cache.set(uri, { ...existing, fetchedAtMs: now() });
+        return;
+      }
+      if (res.status !== 200) {
+        return;
+      }
+      const jwt = (await res.text()).trim();
+      const snapshot = await verifyStatusListCredential(jwt, {
+        fetchedUrl: uri,
+        issuer,
+        key,
+        nowMs: now()
+      });
+      const hw = await getHighWater(uri);
+      if (snapshot.version < hw) {
+        return;
+      }
+      await setHighWater(uri, snapshot.version);
+      const etag = res.headers.get("etag") ?? void 0;
+      cache.set(uri, { snapshot, fetchedAtMs: now(), etag });
+    } catch {
+    }
+  }
+  async function ensureSnapshot(uri) {
+    const cached = cache.get(uri);
+    const due = !cached || now() - cached.fetchedAtMs >= pollIntervalMs || now() >= cached.snapshot.expiresAtMs;
+    if (due) {
+      let pending = inflight.get(uri);
+      if (!pending) {
+        pending = refetch(uri).finally(() => inflight.delete(uri));
+        inflight.set(uri, pending);
+      }
+      await pending;
+    }
+    return cache.get(uri);
+  }
+  async function check(ref) {
+    const lk = latchKey(ref);
+    if (latch.has(lk)) return "revoked";
+    const entry = await ensureSnapshot(ref.uri);
+    if (!entry) {
+      return "stale";
+    }
+    const revoked = bitIsSet(entry.snapshot.bits, ref.index);
+    if (revoked) {
+      latch.add(lk);
+      return "revoked";
+    }
+    const fresh = now() < entry.snapshot.expiresAtMs;
+    if (fresh) return "valid";
+    if (staleFailMode === "closed") return "stale";
+    const stalenessMs = now() - entry.snapshot.expiresAtMs;
+    return stalenessMs <= maxStaleMs ? "valid" : "stale";
+  }
+  return {
+    check,
+    isLatched: (ref) => latch.has(latchKey(ref))
+  };
+}
 export {
   ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
@@ -222,15 +321,18 @@ export {
   buildDid,
   buildPairwiseSubjectDid,
   createMinisterClient,
+  createMinisterStatusChecker,
   createMinisterVerifier,
   didFromIssuer,
   generatePkce,
   getBadgeClaimSchema,
   knownBadgeTypes,
+  parseCredentialStatus,
   randomUrlToken,
   slugForCredentialType,
   verifyMinisterBadge,
   verifyMinisterBadges,
-  verifyMinisterIdToken
+  verifyMinisterIdToken,
+  verifyStatusListCredential
 };
 //# sourceMappingURL=index.js.map
