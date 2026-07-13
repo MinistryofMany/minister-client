@@ -10,6 +10,7 @@ import {
   ResidencyCityClaims,
   InviteCodeClaims,
   TlsnAttestationClaims,
+  GroupMembershipClaims,
   AGE_THRESHOLDS,
   AgeOverClaimsFor,
 } from "./schemas";
@@ -35,6 +36,13 @@ export interface BadgeTypeDef {
   claims: z.ZodType<unknown>;
   // REQUIRED — mirrors Minister's per-type Sybil-resistance metadata.
   sybilResistance: SybilResistance;
+  // Whether a badge of this type can be REVOKED after disclosure via a W3C
+  // Bitstring Status List (docs/groups-revocation-design.md). Mirrors Minister's
+  // @ministryofmany/shared `revocable` flag; the drift-check carries it. When
+  // true, a disclosed VC of this type carries a `credentialStatus` the RP sweeps
+  // with `createMinisterStatusChecker(...).check(...)`. Omitted => false (a
+  // prove-once fact with no post-disclosure recall).
+  revocable?: boolean;
 }
 
 // NOTE: `credentialType` values must match Minister's @ministryofmany/shared
@@ -58,6 +66,12 @@ const ENTRIES: BadgeTypeDef[] = [
   { slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" },
   { slug: "invite-code", credentialType: "MinisterInviteCodeCredential", claims: InviteCodeClaims, sybilResistance: "none" },
   { slug: "tlsn-attestation", credentialType: "MinisterTlsnAttestationCredential", claims: TlsnAttestationClaims, sybilResistance: "none" },
+  // Self-asserted group membership: NEVER buys anti-sybil score (`none`), and is
+  // the one revocable type — a kick reaches entitlements RPs already derived from
+  // a disclosure. MUST be registered or an RP could not verify a disclosed group
+  // VC (badgeTypeOf -> undefined -> rejected), which was the whole feature being
+  // non-functional end-to-end.
+  { slug: "group-membership", credentialType: "MinisterGroupMembershipCredential", claims: GroupMembershipClaims, sybilResistance: "none", revocable: true },
   ...AGE_THRESHOLDS.map((t) => ({
     slug: `age-over-${t}`,
     credentialType: `MinisterAgeOver${t}Credential`,

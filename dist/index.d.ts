@@ -1,7 +1,7 @@
 import { K as KeyInput, V as VerifiedBadge, E as ExchangeResult, M as MinisterClientConfig, P as PkcePair, a as MinisterClaims, B as BadgesResult, b as BadgeStatusRef, S as StatusCheck } from './types-4FLblnJS.js';
 export { c as MinisterGatingNullifier, d as MinisterTokenError, O as OidcError, e as OidcFlowState, R as RejectedBadge, f as StatusListSnapshot, g as VcVerificationError, p as parseCredentialStatus, v as verifyStatusListCredential } from './types-4FLblnJS.js';
 import { JWTPayload } from 'jose';
-export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
+export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, AccountAgeMonths, AgeOverClaimsFor, AgeThreshold, BADGE_TYPES, BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, FollowersBucket, GROUP_ROLES, GroupMembershipClaims, GroupRole, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType } from './badges/index.js';
 import 'zod';
 
 interface GetAuthorizationUrlArgs {
@@ -71,6 +71,11 @@ interface VerifyBadgesOptions {
 declare function verifyMinisterBadges(tokenOrPayload: string | JWTPayload, options: VerifyBadgesOptions): Promise<BadgesResult>;
 
 type StaleFailMode = "open" | "closed";
+interface StatusVerifyErrorInfo {
+    uri: string;
+    error: Error;
+    consecutiveFailures: number;
+}
 interface HighWaterStore {
     get(listUri: string): number | undefined | Promise<number | undefined>;
     set(listUri: string, version: number): void | Promise<void>;
@@ -80,6 +85,7 @@ interface MinisterStatusCheckerConfig {
     pollIntervalMs?: number;
     maxStaleMs?: number;
     staleFailMode?: StaleFailMode;
+    onVerifyError?: (info: StatusVerifyErrorInfo) => void;
     key?: KeyInput;
     persistHighWater?: HighWaterStore;
     fetchImpl?: typeof fetch;
@@ -91,4 +97,4 @@ interface MinisterStatusChecker {
 }
 declare function createMinisterStatusChecker(config: MinisterStatusCheckerConfig): MinisterStatusChecker;
 
-export { BadgeStatusRef, BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, type HighWaterStore, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterStatusChecker, type MinisterStatusCheckerConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, type StaleFailMode, StatusCheck, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterStatusChecker, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };
+export { BadgeStatusRef, BadgesResult, type ExchangeCodeArgs, ExchangeResult, type GetAuthorizationUrlArgs, type HighWaterStore, KeyInput, MinisterClaims, type MinisterClient, MinisterClientConfig, type MinisterStatusChecker, type MinisterStatusCheckerConfig, type MinisterVerifier, type MinisterVerifierConfig, PkcePair, type StaleFailMode, StatusCheck, type StatusVerifyErrorInfo, VerifiedBadge, type VerifyBadgeOptions, type VerifyBadgesOptions, type VerifyIdTokenOptions, buildDid, buildPairwiseSubjectDid, createMinisterClient, createMinisterStatusChecker, createMinisterVerifier, didFromIssuer, generatePkce, randomUrlToken, verifyMinisterBadge, verifyMinisterBadges, verifyMinisterIdToken };

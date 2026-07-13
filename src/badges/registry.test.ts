@@ -40,4 +40,20 @@ describe("badge registry", () => {
     expect(slugForCredentialType("MinisterAgeOver21Credential")).toBe("age-over-21");
     expect(slugForCredentialType("NotAThing")).toBeUndefined();
   });
+  it("registers group-membership as the one revocable type (sybilResistance none)", () => {
+    // Was entirely ABSENT before: badgeTypeOf returned undefined for every
+    // disclosed group VC, so verify-badge threw and every RP rejected the badge.
+    const def = BADGE_TYPES["group-membership"];
+    expect(def?.credentialType).toBe("MinisterGroupMembershipCredential");
+    expect(def?.sybilResistance).toBe("none");
+    expect(def?.revocable).toBe(true);
+    expect(slugForCredentialType("MinisterGroupMembershipCredential")).toBe("group-membership");
+    // The claim schema is STRICT and pins group/role/groupId.
+    expect(def?.claims.parse({ group: "acme", role: "owner", groupId: "g1" })).toEqual({
+      group: "acme",
+      role: "owner",
+      groupId: "g1",
+    });
+    expect(() => def?.claims.parse({ group: "acme", role: "member", groupId: "g1", x: 1 })).toThrow();
+  });
 });

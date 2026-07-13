@@ -115,6 +115,22 @@ declare const TlsnAttestationClaims: z.ZodObject<{
     claim: string;
 }>;
 type TlsnAttestationClaims = z.infer<typeof TlsnAttestationClaims>;
+declare const GROUP_ROLES: readonly ["owner", "admin", "member"];
+type GroupRole = (typeof GROUP_ROLES)[number];
+declare const GroupMembershipClaims: z.ZodObject<{
+    group: z.ZodString;
+    role: z.ZodEnum<["owner", "admin", "member"]>;
+    groupId: z.ZodString;
+}, "strict", z.ZodTypeAny, {
+    group: string;
+    role: "owner" | "admin" | "member";
+    groupId: string;
+}, {
+    group: string;
+    role: "owner" | "admin" | "member";
+    groupId: string;
+}>;
+type GroupMembershipClaims = z.infer<typeof GroupMembershipClaims>;
 
 type SybilResistance = "none" | "weak" | "moderate";
 interface BadgeTypeDef {
@@ -122,6 +138,7 @@ interface BadgeTypeDef {
     credentialType: string;
     claims: z.ZodType<unknown>;
     sybilResistance: SybilResistance;
+    revocable?: boolean;
 }
 declare const BADGE_TYPES: Record<string, BadgeTypeDef>;
 declare function slugForCredentialType(credentialType: string): string | undefined;
@@ -132,4 +149,4 @@ declare function badgeTypeOf(vcType: string[]): string | undefined;
 declare function getBadgeClaimSchema(slug: string): z.ZodType<unknown> | undefined;
 declare function knownBadgeTypes(): string[];
 
-export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, type AccountAgeMonths, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, type FollowersBucket, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, type SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };
+export { ACCOUNT_AGE_MONTHS, AGE_THRESHOLDS, AccountAgeClaims, type AccountAgeMonths, AgeOverClaimsFor, type AgeThreshold, BADGE_TYPES, type BadgeTypeDef, EmailDomainClaims, EmailExactClaims, FOLLOWERS_BUCKETS, type FollowersBucket, GROUP_ROLES, GroupMembershipClaims, type GroupRole, InviteCodeClaims, OAUTH_PROVIDERS, OAuthAccountClaims, ResidencyCityClaims, ResidencyCountryClaims, ResidencyStateClaims, SocialFollowingClaims, type SybilResistance, TlsnAttestationClaims, badgeScope, badgeScopes, badgeTypeOf, getBadgeClaimSchema, knownBadgeTypes, slugForCredentialType };

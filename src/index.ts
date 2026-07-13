@@ -24,6 +24,7 @@ export type {
   MinisterStatusChecker,
   MinisterStatusCheckerConfig,
   StaleFailMode,
+  StatusVerifyErrorInfo,
   HighWaterStore,
 } from "./status-checker";
 export { parseCredentialStatus, verifyStatusListCredential } from "./status-list";

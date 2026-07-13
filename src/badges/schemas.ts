@@ -90,3 +90,29 @@ export const TlsnAttestationClaims = z
   })
   .strict();
 export type TlsnAttestationClaims = z.infer<typeof TlsnAttestationClaims>;
+
+// Group membership — the holder belongs to a Ministry group with a role. The
+// `group` slug is the RP gating key (rooms gate on `where: { group: "<slug>" }`);
+// `groupId` pins the claim to a specific group row so a renamed or
+// deleted-and-recreated slug can't let a stale VC satisfy a gate for a different
+// group under the same name. STRICT — unknown keys are rejected, never stripped
+// (the disclosure path re-signs whatever this schema returns). This is the one
+// REVOCABLE badge type (see registry `revocable`): a kicked member's disclosed
+// VC carries a `credentialStatus` the RP sweeps via createMinisterStatusChecker.
+// Kept in sync with Minister's @ministryofmany/shared GroupMembershipClaims.
+export const GROUP_ROLES = ["owner", "admin", "member"] as const;
+export type GroupRole = (typeof GROUP_ROLES)[number];
+export const GroupMembershipClaims = z
+  .object({
+    // The group's canonical slug — same charset as the server-side founding
+    // validator ([a-z0-9] with single internal hyphens).
+    group: z
+      .string()
+      .min(1)
+      .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u, "Not a valid group slug"),
+    role: z.enum(GROUP_ROLES),
+    // Opaque Group.id, pinning the claim to a specific group row.
+    groupId: z.string().min(1),
+  })
+  .strict();
+export type GroupMembershipClaims = z.infer<typeof GroupMembershipClaims>;

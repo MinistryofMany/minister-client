@@ -43,6 +43,15 @@ var TlsnAttestationClaims = z.object({
   domain: z.string().min(1),
   claim: z.string().min(1)
 }).strict();
+var GROUP_ROLES = ["owner", "admin", "member"];
+var GroupMembershipClaims = z.object({
+  // The group's canonical slug — same charset as the server-side founding
+  // validator ([a-z0-9] with single internal hyphens).
+  group: z.string().min(1).regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/u, "Not a valid group slug"),
+  role: z.enum(GROUP_ROLES),
+  // Opaque Group.id, pinning the claim to a specific group row.
+  groupId: z.string().min(1)
+}).strict();
 
 // src/badges/registry.ts
 var ENTRIES = [
@@ -56,6 +65,12 @@ var ENTRIES = [
   { slug: "residency-city", credentialType: "MinisterResidencyCityCredential", claims: ResidencyCityClaims, sybilResistance: "none" },
   { slug: "invite-code", credentialType: "MinisterInviteCodeCredential", claims: InviteCodeClaims, sybilResistance: "none" },
   { slug: "tlsn-attestation", credentialType: "MinisterTlsnAttestationCredential", claims: TlsnAttestationClaims, sybilResistance: "none" },
+  // Self-asserted group membership: NEVER buys anti-sybil score (`none`), and is
+  // the one revocable type — a kick reaches entitlements RPs already derived from
+  // a disclosure. MUST be registered or an RP could not verify a disclosed group
+  // VC (badgeTypeOf -> undefined -> rejected), which was the whole feature being
+  // non-functional end-to-end.
+  { slug: "group-membership", credentialType: "MinisterGroupMembershipCredential", claims: GroupMembershipClaims, sybilResistance: "none", revocable: true },
   ...AGE_THRESHOLDS.map((t) => ({
     slug: `age-over-${t}`,
     credentialType: `MinisterAgeOver${t}Credential`,
@@ -110,6 +125,8 @@ export {
   ResidencyCityClaims,
   InviteCodeClaims,
   TlsnAttestationClaims,
+  GROUP_ROLES,
+  GroupMembershipClaims,
   BADGE_TYPES,
   slugForCredentialType,
   badgeScope,
@@ -118,4 +135,4 @@ export {
   getBadgeClaimSchema,
   knownBadgeTypes
 };
-//# sourceMappingURL=chunk-KOYZMUKO.js.map
+//# sourceMappingURL=chunk-LS6OOLHT.js.map

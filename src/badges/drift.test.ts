@@ -28,6 +28,10 @@ interface Expected {
   sample: Record<string, unknown>;
   // z.object(...).strict() rejects unknown keys; plain z.object strips them.
   strict: boolean;
+  // Revocable-after-disclosure via a Bitstring Status List. Omitted => false.
+  // Only group-membership is revocable today (docs/groups-revocation-design.md).
+  // Kept in lockstep with the provider-side badge-types.drift.test.
+  revocable?: boolean;
 }
 
 const AGE_THRESHOLDS = [16, 18, 21, 25, 30, 35, 40, 45, 55, 65] as const;
@@ -98,6 +102,13 @@ const EXPECTED: Record<string, Expected> = {
     sample: { domain: "id.me", claim: "verified" },
     strict: true,
   },
+  "group-membership": {
+    credentialType: "MinisterGroupMembershipCredential",
+    sybilResistance: "none",
+    sample: { group: "acme", role: "member", groupId: "grp_abc123" },
+    strict: true,
+    revocable: true,
+  },
   ...Object.fromEntries(
     AGE_THRESHOLDS.map((t) => [
       `age-over-${t}`,
@@ -123,6 +134,15 @@ describe("badge registry drift vs @ministryofmany/shared (frozen contract)", () 
         expect(def, `SDK is missing badge type ${slug}`).toBeDefined();
         expect(def!.credentialType).toBe(exp.credentialType);
         expect(def!.sybilResistance).toBe(exp.sybilResistance);
+      });
+
+      // Drift guard for the revocable flag (mirror of the provider-side
+      // badge-types.drift.test). A revocable type silently registered as
+      // non-revocable would strip the RP's status handling — the exact
+      // vocabulary drift §5.8 warns must not ship unnoticed.
+      it("matches revocable", () => {
+        const def = BADGE_TYPES[slug];
+        expect(def!.revocable ?? false).toBe(exp.revocable ?? false);
       });
 
       it("accepts the canonical sample claims", () => {

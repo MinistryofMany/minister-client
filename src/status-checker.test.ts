@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createMinisterStatusChecker } from "./status-checker";
+import { createMinisterStatusChecker, type StatusVerifyErrorInfo } from "./status-checker";
 import { makeKeys, newStatusBits, setStatusBit, signStatusList, type TestKeys } from "./test-helpers";
 import type { BadgeStatusRef } from "./status-list";
 
@@ -188,6 +188,87 @@ describe("createMinisterStatusChecker", () => {
     list.mode = "503";
     const checker = createMinisterStatusChecker({ issuer: ISSUER, key: keys.publicJwk, fetchImpl: list.fetch });
     expect(await checker.check(REF)).toBe("stale");
+  });
+
+  it("Warning A: fail-open honors a FINITE default cap (~1h), then fails closed", async () => {
+    const keys = await makeKeys();
+    const list = new FakeList();
+    let clock = Date.now();
+    const checker = createMinisterStatusChecker({
+      issuer: ISSUER,
+      key: keys.publicJwk,
+      fetchImpl: list.fetch,
+      pollIntervalMs: 0,
+      nowFn: () => clock,
+    });
+    await publish(keys, list, 1, [], 60); // exp in 60s
+    expect(await checker.check(REF)).toBe("valid");
+
+    // Unreachable list. Within the 1h default cap => still fail-open valid.
+    list.mode = "error";
+    clock += 30 * 60_000; // ~30 min past exp
+    expect(await checker.check(REF)).toBe("valid");
+
+    // Past the finite default cap => the un-refreshed CLEAR bit fails CLOSED.
+    clock += 40 * 60_000; // ~70 min past exp, beyond the 1h default
+    expect(await checker.check(REF)).toBe("stale");
+  });
+
+  it("C1: a forged 200 body (bad signature) fails CLOSED past exp, not silent fail-open", async () => {
+    const keys = await makeKeys();
+    const attacker = await makeKeys();
+    const list = new FakeList();
+    let clock = Date.now();
+    const verifyErrors: StatusVerifyErrorInfo[] = [];
+    const checker = createMinisterStatusChecker({
+      issuer: ISSUER,
+      key: keys.publicJwk,
+      fetchImpl: list.fetch,
+      pollIntervalMs: 0, // always refetch
+      nowFn: () => clock,
+      onVerifyError: (info) => verifyErrors.push(info),
+    });
+
+    await publish(keys, list, 1, [], 60); // exp in 60s
+    expect(await checker.check(REF)).toBe("valid");
+
+    // Attacker serves a well-formed 200 signed by a DIFFERENT key, version bumped
+    // so it is not a 304. Verification must fail on the signature.
+    list.jwt = await signStatusList({
+      privateKey: attacker.privateKey,
+      issuerDid: ISSUER_DID,
+      listUrl: LIST_URL,
+      version: 2,
+      bits: newStatusBits(),
+      expDeltaSec: 900,
+    });
+    list.version = 2;
+
+    // Past the good snapshot's exp but well within the 1h fail-open cap. A verify
+    // failure (not an outage) must still fail CLOSED and be reported.
+    clock += 5 * 60_000;
+    expect(await checker.check(REF)).toBe("stale");
+    expect(verifyErrors.length).toBeGreaterThan(0);
+    expect(verifyErrors[verifyErrors.length - 1]!.consecutiveFailures).toBeGreaterThanOrEqual(1);
+    expect(verifyErrors[verifyErrors.length - 1]!.uri).toBe(LIST_URL);
+  });
+
+  it("S1: an out-of-range status index fails CLOSED (revoked), never silently valid", async () => {
+    const keys = await makeKeys();
+    const list = new FakeList();
+    const verifyErrors: StatusVerifyErrorInfo[] = [];
+    const checker = createMinisterStatusChecker({
+      issuer: ISSUER,
+      key: keys.publicJwk,
+      fetchImpl: list.fetch,
+      onVerifyError: (info) => verifyErrors.push(info),
+    });
+    await publish(keys, list, 1, []); // a full 8,192-bit, all-clear list
+    // 9000 is within parseCredentialStatus's 2^20 ceiling but past this shard's
+    // 8,192 bits: a malformed pointer. bitIsSet would read byte 1125 as clear.
+    const outOfRange: BadgeStatusRef = { uri: LIST_URL, index: 9000 };
+    expect(await checker.check(outOfRange)).toBe("revoked");
+    expect(verifyErrors.length).toBeGreaterThan(0);
   });
 
   it("herd-private: a 304 keeps the cached snapshot without a full re-verify", async () => {

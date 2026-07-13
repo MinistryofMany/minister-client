@@ -14,7 +14,7 @@ import {
   verifyMinisterBadges,
   verifyMinisterIdToken,
   verifyStatusListCredential
-} from "./chunk-CSZHGHQP.js";
+} from "./chunk-JCTSBB3X.js";
 import "./chunk-R4XGCZVA.js";
 import {
   ACCOUNT_AGE_MONTHS,
@@ -25,6 +25,8 @@ import {
   EmailDomainClaims,
   EmailExactClaims,
   FOLLOWERS_BUCKETS,
+  GROUP_ROLES,
+  GroupMembershipClaims,
   InviteCodeClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
@@ -39,7 +41,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "./chunk-KOYZMUKO.js";
+} from "./chunk-LS6OOLHT.js";
 
 // src/oidc.ts
 import { createRemoteJWKSet } from "jose";
@@ -203,13 +205,15 @@ function createMinisterVerifier(config) {
 
 // src/status-checker.ts
 var DEFAULT_POLL_INTERVAL_MS = 6e4;
+var DEFAULT_LIST_VALIDITY_WINDOW_MS = 15 * 6e4;
+var DEFAULT_MAX_STALE_MS = 4 * DEFAULT_LIST_VALIDITY_WINDOW_MS;
 function latchKey(ref) {
   return `${ref.uri.replace(/\/$/, "")}#${ref.index}`;
 }
 function createMinisterStatusChecker(config) {
   const issuer = config.issuer.replace(/\/$/, "");
   const pollIntervalMs = config.pollIntervalMs ?? DEFAULT_POLL_INTERVAL_MS;
-  const maxStaleMs = config.maxStaleMs ?? Number.POSITIVE_INFINITY;
+  const maxStaleMs = config.maxStaleMs ?? DEFAULT_MAX_STALE_MS;
   const staleFailMode = config.staleFailMode ?? "open";
   const key = config.key ?? assertionResolverFor(issuer);
   const fetchImpl = config.fetchImpl ?? fetch;
@@ -218,6 +222,8 @@ function createMinisterStatusChecker(config) {
   const inflight = /* @__PURE__ */ new Map();
   const memHighWater = /* @__PURE__ */ new Map();
   const latch = /* @__PURE__ */ new Set();
+  const verifyFailures = /* @__PURE__ */ new Map();
+  const lastVerifyFailed = /* @__PURE__ */ new Map();
   async function getHighWater(uri) {
     if (config.persistHighWater) {
       const v = await config.persistHighWater.get(uri);
@@ -229,35 +235,57 @@ function createMinisterStatusChecker(config) {
     memHighWater.set(uri, version);
     if (config.persistHighWater) await config.persistHighWater.set(uri, version);
   }
+  function clearVerifyFailure(uri) {
+    verifyFailures.delete(uri);
+    lastVerifyFailed.delete(uri);
+  }
   async function refetch(uri) {
     const existing = cache.get(uri);
+    let res;
     try {
       const headers = {};
       if (existing?.etag) headers["If-None-Match"] = existing.etag;
-      const res = await fetchImpl(uri, { headers });
-      if (res.status === 304 && existing) {
-        cache.set(uri, { ...existing, fetchedAtMs: now() });
-        return;
-      }
-      if (res.status !== 200) {
-        return;
-      }
+      res = await fetchImpl(uri, { headers });
+    } catch {
+      return;
+    }
+    if (res.status === 304 && existing) {
+      cache.set(uri, { ...existing, fetchedAtMs: now() });
+      clearVerifyFailure(uri);
+      return;
+    }
+    if (res.status !== 200) {
+      return;
+    }
+    let snapshot;
+    try {
       const jwt = (await res.text()).trim();
-      const snapshot = await verifyStatusListCredential(jwt, {
+      snapshot = await verifyStatusListCredential(jwt, {
         fetchedUrl: uri,
         issuer,
         key,
         nowMs: now()
       });
-      const hw = await getHighWater(uri);
-      if (snapshot.version < hw) {
-        return;
-      }
-      await setHighWater(uri, snapshot.version);
-      const etag = res.headers.get("etag") ?? void 0;
-      cache.set(uri, { snapshot, fetchedAtMs: now(), etag });
-    } catch {
+    } catch (verr) {
+      const count = (verifyFailures.get(uri) ?? 0) + 1;
+      verifyFailures.set(uri, count);
+      lastVerifyFailed.set(uri, true);
+      config.onVerifyError?.({
+        uri,
+        error: verr instanceof Error ? verr : new Error(String(verr)),
+        consecutiveFailures: count
+      });
+      return;
     }
+    const hw = await getHighWater(uri);
+    if (snapshot.version < hw) {
+      clearVerifyFailure(uri);
+      return;
+    }
+    await setHighWater(uri, snapshot.version);
+    const etag = res.headers.get("etag") ?? void 0;
+    cache.set(uri, { snapshot, fetchedAtMs: now(), etag });
+    clearVerifyFailure(uri);
   }
   async function ensureSnapshot(uri) {
     const cached = cache.get(uri);
@@ -279,6 +307,17 @@ function createMinisterStatusChecker(config) {
     if (!entry) {
       return "stale";
     }
+    const bitLength = entry.snapshot.bits.length * 8;
+    if (ref.index < 0 || ref.index >= bitLength) {
+      config.onVerifyError?.({
+        uri: ref.uri,
+        error: new Error(
+          `status index ${ref.index} is out of range for a ${bitLength}-bit list`
+        ),
+        consecutiveFailures: verifyFailures.get(ref.uri) ?? 0
+      });
+      return "revoked";
+    }
     const revoked = bitIsSet(entry.snapshot.bits, ref.index);
     if (revoked) {
       latch.add(lk);
@@ -287,6 +326,7 @@ function createMinisterStatusChecker(config) {
     const fresh = now() < entry.snapshot.expiresAtMs;
     if (fresh) return "valid";
     if (staleFailMode === "closed") return "stale";
+    if (lastVerifyFailed.get(ref.uri)) return "stale";
     const stalenessMs = now() - entry.snapshot.expiresAtMs;
     return stalenessMs <= maxStaleMs ? "valid" : "stale";
   }
@@ -304,6 +344,8 @@ export {
   EmailDomainClaims,
   EmailExactClaims,
   FOLLOWERS_BUCKETS,
+  GROUP_ROLES,
+  GroupMembershipClaims,
   InviteCodeClaims,
   MinisterTokenError,
   OAUTH_PROVIDERS,

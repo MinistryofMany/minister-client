@@ -168,7 +168,11 @@ export async function verifyStatusListCredential(
       requiredClaims: ["exp", "sub"],
       clockTolerance: opts.clockToleranceSec ?? DEFAULT_CLOCK_TOLERANCE_SEC,
       // Enforce max-age against the signed exp ourselves below too, but jose
-      // already rejects an expired token here (defense 2).
+      // already rejects an expired token here (defense 2). Thread the injected
+      // clock into jose's exp/nbf evaluation so a clock-injected test (and the
+      // checker's own `nowFn`) governs the signed-freshness check for real — not
+      // just our post-hoc `expiresAtMs` comparison. Absent => jose uses wall time.
+      ...(opts.nowMs !== undefined ? { currentDate: new Date(opts.nowMs) } : {}),
     });
     payload = result.payload;
   } catch (cause) {

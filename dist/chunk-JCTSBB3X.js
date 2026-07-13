@@ -1,7 +1,7 @@
 import {
   badgeTypeOf,
   getBadgeClaimSchema
-} from "./chunk-KOYZMUKO.js";
+} from "./chunk-LS6OOLHT.js";
 
 // src/did.ts
 function buildDid(domain) {
@@ -140,9 +140,13 @@ async function verifyStatusListCredential(jwt, opts) {
       algorithms: ["EdDSA"],
       typ: "vc+jwt",
       requiredClaims: ["exp", "sub"],
-      clockTolerance: opts.clockToleranceSec ?? DEFAULT_CLOCK_TOLERANCE_SEC
+      clockTolerance: opts.clockToleranceSec ?? DEFAULT_CLOCK_TOLERANCE_SEC,
       // Enforce max-age against the signed exp ourselves below too, but jose
-      // already rejects an expired token here (defense 2).
+      // already rejects an expired token here (defense 2). Thread the injected
+      // clock into jose's exp/nbf evaluation so a clock-injected test (and the
+      // checker's own `nowFn`) governs the signed-freshness check for real — not
+      // just our post-hoc `expiresAtMs` comparison. Absent => jose uses wall time.
+      ...opts.nowMs !== void 0 ? { currentDate: new Date(opts.nowMs) } : {}
     });
     payload = result.payload;
   } catch (cause) {
@@ -480,4 +484,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-CSZHGHQP.js.map
+//# sourceMappingURL=chunk-JCTSBB3X.js.map

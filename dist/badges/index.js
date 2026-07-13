@@ -8,6 +8,8 @@ import {
   EmailDomainClaims,
   EmailExactClaims,
   FOLLOWERS_BUCKETS,
+  GROUP_ROLES,
+  GroupMembershipClaims,
   InviteCodeClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
@@ -22,7 +24,7 @@ import {
   getBadgeClaimSchema,
   knownBadgeTypes,
   slugForCredentialType
-} from "../chunk-KOYZMUKO.js";
+} from "../chunk-LS6OOLHT.js";
 export {
   ACCOUNT_AGE_MONTHS,
   AGE_THRESHOLDS,
@@ -32,6 +34,8 @@ export {
   EmailDomainClaims,
   EmailExactClaims,
   FOLLOWERS_BUCKETS,
+  GROUP_ROLES,
+  GroupMembershipClaims,
   InviteCodeClaims,
   OAUTH_PROVIDERS,
   OAuthAccountClaims,
