@@ -10,9 +10,13 @@
 //      BIP-39 mnemonic backup,
 //   3. the per-device commitment lifecycle + revocation contract the membership
 //      layer uses to rebuild a root excluding revoked devices,
-//   4. the structural SemaphoreIdentityLike contract membership consumes.
+//   4. the structural SemaphoreIdentityLike contract membership consumes,
+//   5. the Ministry anon handoff (minister-link): extract the per-app secret
+//      from the OIDC callback fragment + mix in the RP's own secret to produce
+//      the device seed that feeds derivation (anon-identity master spec 8.4/9).
 export * from "./types.js";
 export * from "./derive.js";
 export * from "./vault.js";
 export * from "./mnemonic.js";
 export * from "./revocation.js";
+export * from "./minister-link.js";
