@@ -199,6 +199,28 @@ describe("extractMinisterAppSecret: parse + scrub", () => {
     expect(urls).toEqual(["/auth/callback?ok=1#a=1&b=2"]);
   });
 
+  it("preserves an existing history.state through the scrub (does not clobber router state)", () => {
+    const routerState = { key: "route-1", nav: 42 };
+    const datas: unknown[] = [];
+    const urls: Array<string | null | undefined> = [];
+    const history: MinisterLinkHistory = {
+      state: routerState,
+      replaceState: (data, _unused, url) => {
+        datas.push(data);
+        urls.push(url);
+      },
+    };
+    const secret = extractMinisterAppSecret({
+      location: fakeLocation(`#${MINISTER_ANON_PARAM}=${VALID_FRAGMENT_VALUE}`),
+      history,
+    });
+    expect(secret).not.toBeNull();
+    // The URL is rewritten, but the router's state entry is carried over verbatim
+    // (null would have wiped it).
+    expect(urls).toEqual(["/auth/callback?ok=1"]);
+    expect(datas).toEqual([routerState]);
+  });
+
   it("scrub: false leaves the URL untouched but still returns the secret", () => {
     const { urls, history } = recordingHistory();
     const secret = extractMinisterAppSecret({

@@ -50,6 +50,8 @@ export interface MinisterLinkLocation {
 
 /** Structural subset of DOM `History` used for the scrub. */
 export interface MinisterLinkHistory {
+  /** Current router/history state, preserved across the scrub replaceState. */
+  readonly state?: unknown;
   replaceState(data: unknown, unused: string, url?: string | null): void;
 }
 
@@ -130,7 +132,9 @@ export function extractMinisterAppSecret(opts?: {
           "false only if the caller removes the fragment by other means.",
       );
     }
-    hist.replaceState(null, "", url);
+    // Preserve any existing router/history state: passing null would clobber
+    // a framework router's state entry. Only the URL is being rewritten here.
+    hist.replaceState(hist.state ?? null, "", url);
   }
 
   const match = FRAGMENT_VALUE.exec(raw);
