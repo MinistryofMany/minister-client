@@ -1,0 +1,24 @@
+{
+  "_comment": "FROZEN golden vectors for the two-level anon-identity HKDF derivation. The SDK and Ministry MUST reproduce these exactly; do not edit a hex value - if derivation drifts, fix the derivation, not this file. Both levels use HKDF-SHA-256 with salt 'ministry/anon/v1'. L1 info = 'ministry/v1/rp/'+appId+'/'+epoch (ikm=root, ministry.id only). L2 info = 'ministry/v1/ctx/'+contextId (ikm=the app's L1 branch).",
+  "salt": "ministry/anon/v1",
+  "hash": "SHA-256",
+  "length": 32,
+  "rootHex": "4d696e6973747279206f66204d616e79",
+  "rootUtf8": "Ministry of Many",
+  "l1InfoPrefix": "ministry/v1/rp/",
+  "l1": [
+    { "app": "deforum", "epoch": 1, "hex": "99c3d5190c131b9cb9527bd634465a9bdc426efc5cdd945fa99eab01eebb4d66" },
+    { "app": "freedink", "epoch": 1, "hex": "e343901833730bd6276e5c19adef764ab03dfeabf89afb667791457a01c3db4f" },
+    { "app": "discreetly", "epoch": 1, "hex": "6457d02b6c4c9244d8993b87a0d610189935c571620f27b0168d60ebc389168c" },
+    { "app": "deforum", "epoch": 2, "hex": "398e9801c610f938a172f189e411c5acd6ad87e6176cea3d083e111c65934087" }
+  ],
+  "l2InfoPrefix": "ministry/v1/ctx/",
+  "l2From": { "app": "deforum", "epoch": 1 },
+  "l2": [
+    { "context": { "kind": "subforum", "id": "general" }, "contextId": "subforum/general", "hex": "5821afd1e2eae496b64485015eb7bede5e0dc23fd8558af5913a064b7ac59553" },
+    { "context": { "kind": "room", "id": "abc123" }, "contextId": "room/abc123", "hex": "48906b178792078cf8700024aa8f4a7ec3c58a61e5ada88d04e686c21ce27f7a" },
+    { "context": { "kind": "blog", "id": "xyz789" }, "contextId": "blog/xyz789", "hex": "54fab16c38562f7ec7ff696bcfa034d9bdefe6e161b03b2af008882dd8801b06" },
+    { "context": { "kind": "room", "id": "abc123", "sub": "trapdoor" }, "contextId": "room/abc123/trapdoor", "hex": "ba954f04f26e62d9d0a679956fe7c3ca937e697d14196db57ce3ecde421fb07d" },
+    { "context": { "kind": "room", "id": "abc123", "sub": "nullifier" }, "contextId": "room/abc123/nullifier", "hex": "1a9c60e15b8b5607fea8f64697e7752f96995c52c83f3f5ed9cc53ace7f054d7" }
+  ]
+}

@@ -75,11 +75,21 @@ export function claimsFromPayload(payload: JWTPayload, raw: string): MinisterCla
     rawBucket <= 4
       ? rawBucket
       : undefined;
+  // Same discipline as sybil_bucket: authenticated upstream, range-validated on
+  // the way out. An epoch is a positive integer (>= 1, no upper bound); omit
+  // anything else rather than coerce, so a missing/garbage claim reads as "no
+  // epoch" and decideAnonAction fails closed.
+  const rawEpoch = payload["minister_anon_epoch"];
+  const minister_anon_epoch =
+    typeof rawEpoch === "number" && Number.isInteger(rawEpoch) && rawEpoch >= 1
+      ? rawEpoch
+      : undefined;
   return {
     sub: payload.sub as string,
     name: typeof payload["name"] === "string" ? (payload["name"] as string) : undefined,
     picture: typeof payload["picture"] === "string" ? (payload["picture"] as string) : undefined,
     sybil_bucket,
+    minister_anon_epoch,
     raw,
   };
 }

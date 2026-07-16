@@ -51,9 +51,6 @@ importers:
 
   packages/identity:
     dependencies:
-      '@scure/bip39':
-        specifier: ^1.6.0
-        version: 1.6.0
       '@semaphore-protocol/identity':
         specifier: ^4.0.3
         version: 4.14.2
@@ -769,12 +766,6 @@ packages:
     resolution: {integrity: sha512-5L+T1fMX4RIEBoZzT0+sQ0PhTS36NULFmMXtl1TZo44TMAROIMHbZufSOjVWt/Y622BtxgxtaNOokbTDvfsrZA==}
     cpu: [x64]
     os: [win32]
-
-  '@scure/base@1.2.6':
-    resolution: {integrity: sha512-g/nm5FgUa//MCj1gV09zTJTaM6KBAHqLN907YVQqf7zC49+DcO4B1so4ZX07Ef10Twr6nuqYEH9GEggFXA4Fmg==}
-
-  '@scure/bip39@1.6.0':
-    resolution: {integrity: sha512-+lF0BbLiJNwVlev4eKelw1WWLaiKXw7sSl8T6FvBlWkdX+94aGJ4o8XjUdlyhTCjd8c+B3KT3JfS8P0bLRNU6A==}
 
   '@semaphore-protocol/group@3.10.1':
     resolution: {integrity: sha512-/JAbXhJ1d8KrU73TAc29ALCGVuGVqSMX0lDVD3ItVDn0ikGxk4DnyF2Hfq6tws0KDc313HULT+2NZl4yx/nqCQ==}
@@ -2235,13 +2226,6 @@ snapshots:
 
   '@rollup/rollup-win32-x64-msvc@4.62.0':
     optional: true
-
-  '@scure/base@1.2.6': {}
-
-  '@scure/bip39@1.6.0':
-    dependencies:
-      '@noble/hashes': 1.8.0
-      '@scure/base': 1.2.6
 
   '@semaphore-protocol/group@3.10.1':
     dependencies:

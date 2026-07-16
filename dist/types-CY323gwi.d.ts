@@ -52,6 +52,7 @@ interface MinisterClaims {
     name?: string;
     picture?: string;
     sybil_bucket?: number;
+    minister_anon_epoch?: number;
     raw: string;
 }
 /**

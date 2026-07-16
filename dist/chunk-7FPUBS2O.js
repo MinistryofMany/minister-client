@@ -402,11 +402,14 @@ async function verifyIdTokenPayload(idToken, options) {
 function claimsFromPayload(payload, raw) {
   const rawBucket = payload["sybil_bucket"];
   const sybil_bucket = typeof rawBucket === "number" && Number.isInteger(rawBucket) && rawBucket >= 0 && rawBucket <= 4 ? rawBucket : void 0;
+  const rawEpoch = payload["minister_anon_epoch"];
+  const minister_anon_epoch = typeof rawEpoch === "number" && Number.isInteger(rawEpoch) && rawEpoch >= 1 ? rawEpoch : void 0;
   return {
     sub: payload.sub,
     name: typeof payload["name"] === "string" ? payload["name"] : void 0,
     picture: typeof payload["picture"] === "string" ? payload["picture"] : void 0,
     sybil_bucket,
+    minister_anon_epoch,
     raw
   };
 }
@@ -484,4 +487,4 @@ export {
   verifyMinisterIdToken,
   verifyMinisterBadges
 };
-//# sourceMappingURL=chunk-JCTSBB3X.js.map
+//# sourceMappingURL=chunk-7FPUBS2O.js.map

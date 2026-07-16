@@ -17,13 +17,35 @@ export type FieldString = string;
 export type IdentityCommitment = FieldString;
 
 /**
- * An opaque, app-defined membership context. One Semaphore identity is derived
- * per context from a single device seed, so each context gets a distinct,
- * unlinkable commitment.
- *  - Deforum: a sub-forum id.
- *  - Discreetly: a room id (this is the fix for its cross-room commitment reuse).
- *  - FreedInk: a blog id.
- * Free-form string: a new context never needs a schema/enum migration.
+ * A structured, app-defined membership context. One Semaphore identity is
+ * derived per context from a single per-app secret, so each context gets a
+ * distinct, unlinkable commitment. The context is serialized into the L2 HKDF
+ * `info` string as `kind/id[/sub]`.
+ *
+ *  - Deforum:    `{ kind: "subforum", id: <subforumId> }`
+ *  - Discreetly: `{ kind: "room", id: <roomId> }`, and for its flat Semaphore v3
+ *    derivation `{ kind: "room", id: <roomId>, sub: "trapdoor" }` /
+ *    `{ ..., sub: "nullifier" }`.
+ *  - FreedInk:   `{ kind: "blog", id: <blogId> }`.
+ *
+ * Structured (not a free-form string) so a `/` in an id cannot collide two
+ * distinct contexts onto the same secret: each segment is validated to contain
+ * no slash, making the `kind/id[/sub]` decomposition unambiguous. A new context
+ * kind never needs a schema/enum migration.
+ */
+export interface AnonContext {
+  /** The context family, e.g. "subforum" | "room" | "blog". No `/`. */
+  readonly kind: string;
+  /** The context instance id (subforum/room/blog id). No `/`. */
+  readonly id: string;
+  /** Optional leaf qualifier, e.g. "trapdoor" | "nullifier". No `/`. */
+  readonly sub?: string;
+}
+
+/**
+ * An opaque, app-defined context key used by the device-revocation contract
+ * below. Distinct from `AnonContext` (the derivation input): the revocation
+ * registry keys device records by an opaque app string, never derives from it.
  */
 export type ContextId = string;
 
@@ -56,7 +78,7 @@ export interface SemaphoreIdentityLike {
  */
 export interface DerivedIdentity extends SemaphoreIdentityLike {
   /** The context this identity was derived for. */
-  readonly context: ContextId;
+  readonly context: AnonContext;
   /** The native Semaphore v4 identity. */
   readonly identity: Identity;
   /** Same object as `identity`, typed per the structural contract. */

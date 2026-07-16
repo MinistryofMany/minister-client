@@ -2,12 +2,18 @@ import { describe, expect, it } from "vitest";
 import { Identity } from "@semaphore-protocol/identity";
 import { InMemoryRevocationRegistry } from "./revocation.js";
 import { excludeRevoked } from "./types.js";
-import type { SemaphoreIdentityLike } from "./types.js";
-import { deriveIdentity, generateDeviceSeed } from "./derive.js";
+import type { AnonContext, SemaphoreIdentityLike } from "./types.js";
+import { PER_APP_SECRET_BYTES, deriveIdentity } from "./derive.js";
+
+/** A random per-app secret; distinct calls give distinct commitments. */
+function randomSecret(): Uint8Array {
+  return globalThis.crypto.getRandomValues(new Uint8Array(PER_APP_SECRET_BYTES));
+}
+const ROOM1: AnonContext = { kind: "room", id: "1" };
 
 describe("SemaphoreIdentityLike contract", () => {
   it("a derived identity satisfies the structural shape membership consumes", async () => {
-    const id = await deriveIdentity(generateDeviceSeed(), "ctx");
+    const id = await deriveIdentity(randomSecret(), { kind: "room", id: "ctx" });
     // Structural: commitment decimal string + opaque native handle.
     const like: SemaphoreIdentityLike = id;
     expect(typeof like.commitment).toBe("string");
@@ -21,10 +27,10 @@ describe("SemaphoreIdentityLike contract", () => {
 describe("per-device commitment lifecycle + revocation contract", () => {
   it("registers active devices; revoke flips status and surfaces the revoked commitment", async () => {
     const reg = new InMemoryRevocationRegistry();
-    const seedX = generateDeviceSeed();
-    const seedY = generateDeviceSeed();
-    const idX = await deriveIdentity(seedX, "room:1");
-    const idY = await deriveIdentity(seedY, "room:1");
+    const seedX = randomSecret();
+    const seedY = randomSecret();
+    const idX = await deriveIdentity(seedX, ROOM1);
+    const idY = await deriveIdentity(seedY, ROOM1);
 
     reg.register("room:1", "device-x", idX.commitment);
     reg.register("room:1", "device-y", idY.commitment);
@@ -63,8 +69,8 @@ describe("per-device commitment lifecycle + revocation contract", () => {
 
   it("excludeRevoked subtracts revoked commitments and preserves order (membership root contract)", async () => {
     const reg = new InMemoryRevocationRegistry();
-    const seeds = [generateDeviceSeed(), generateDeviceSeed(), generateDeviceSeed()];
-    const ids = await Promise.all(seeds.map((s) => deriveIdentity(s, "room:1")));
+    const seeds = [randomSecret(), randomSecret(), randomSecret()];
+    const ids = await Promise.all(seeds.map((s) => deriveIdentity(s, ROOM1)));
     ids.forEach((id, i) => reg.register("room:1", `device-${i}`, id.commitment));
 
     await reg.revoke("room:1", "device-1"); // revoke the middle one

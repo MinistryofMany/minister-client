@@ -126,6 +126,25 @@ describe("verifyMinisterIdToken", () => {
     const claims = await verifyMinisterIdToken(await signId({ over: { sybil_bucket: 4 } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
     expect(claims.sybil_bucket).toBe(4);
   });
+  it("surfaces a valid minister_anon_epoch (1, no upper bound)", async () => {
+    const { publicJwk, signId } = await setup();
+    for (const epoch of [1, 2, 9999]) {
+      const claims = await verifyMinisterIdToken(await signId({ over: { minister_anon_epoch: epoch } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+      expect(claims.minister_anon_epoch).toBe(epoch);
+    }
+  });
+  it("omits minister_anon_epoch when absent", async () => {
+    const { publicJwk, signId } = await setup();
+    const claims = await verifyMinisterIdToken(await signId(), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+    expect(claims.minister_anon_epoch).toBeUndefined();
+  });
+  it("fails closed: epoch < 1 / non-integer / wrong-type minister_anon_epoch is omitted, never throws", async () => {
+    const { publicJwk, signId } = await setup();
+    for (const bad of [0, -1, 1.5, "1", true, null] as unknown[]) {
+      const claims = await verifyMinisterIdToken(await signId({ over: { minister_anon_epoch: bad } }), { issuer: ISSUER, clientId: CLIENT, key: publicJwk });
+      expect(claims.minister_anon_epoch).toBeUndefined();
+    }
+  });
   it("rejects a non-EdDSA (HS256) token", async () => {
     const { publicJwk } = await setup();
     const hs = await new SignJWT({ name: "Ada" })

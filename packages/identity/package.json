@@ -1,7 +1,7 @@
 {
   "name": "@ministryofmany/identity",
   "version": "0.2.0",
-  "description": "Pure Semaphore v4 identity layer: deterministic device-seed -> per-context Identity derivation (one backed-up seed yields an unlinkable distinct commitment per context), a framework-agnostic PBKDF2-SHA256 + AES-GCM seed vault with a BIP-39 mnemonic backup, the per-device commitment lifecycle + revocation contract, and the structural SemaphoreIdentityLike shape the membership layer consumes. No Semaphore v3 or RLN in its dependency tree.",
+  "description": "Pure Semaphore v4 identity layer: deterministic per-app-secret -> per-context Identity derivation (one Ministry-delivered branch yields an unlinkable distinct commitment per context), a zero-dependency ./link entry for the OIDC-fragment anon handoff (capture + scrub + epoch-driven adopt/rekey decision), the per-device commitment lifecycle + revocation contract, and the structural SemaphoreIdentityLike shape the membership layer consumes. No Semaphore v3 or RLN in its dependency tree.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
   "author": "AtHeartEngineer",
@@ -12,6 +12,10 @@
     ".": {
       "types": "./dist/index.d.ts",
       "import": "./dist/index.js"
+    },
+    "./link": {
+      "types": "./dist/link.d.ts",
+      "import": "./dist/link.js"
     }
   },
   "files": [
@@ -25,7 +29,6 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@scure/bip39": "^1.6.0",
     "@semaphore-protocol/identity": "^4.0.3"
   },
   "devDependencies": {

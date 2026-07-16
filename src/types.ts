@@ -51,6 +51,13 @@ export interface MinisterClaims {
   // [0,4] (0 is a real value), otherwise undefined. Never recompute it — the
   // score config is server-only; consume this value as-is.
   sybil_bucket?: number;
+  // The anon-identity epoch for this RP, snapshotted at consent. Bumps when the
+  // user re-keys (loses their root); the app re-keys its identity only when this
+  // strictly advances past the epoch it last keyed at (see decideAnonAction in
+  // @ministryofmany/identity/link). Verified upstream (signed id_token) and
+  // range-validated on the way out; present ONLY when it is an integer >= 1,
+  // otherwise undefined. Never recompute it - Ministry owns the epoch.
+  minister_anon_epoch?: number;
   // The original id_token JWT, for forwarding/storage.
   raw: string;
 }

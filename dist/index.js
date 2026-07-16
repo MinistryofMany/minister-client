@@ -14,7 +14,7 @@ import {
   verifyMinisterBadges,
   verifyMinisterIdToken,
   verifyStatusListCredential
-} from "./chunk-JCTSBB3X.js";
+} from "./chunk-7FPUBS2O.js";
 import "./chunk-R4XGCZVA.js";
 import {
   ACCOUNT_AGE_MONTHS,
