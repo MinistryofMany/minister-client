@@ -28,7 +28,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@ethersproject/bytes": "5.7.0",
+    "@ethersproject/bytes": "5.8.0",
     "@ethersproject/keccak256": "5.7.0",
     "@ethersproject/strings": "5.7.0",
     "@semaphore-protocol/group": "3.10.1",
