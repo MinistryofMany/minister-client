@@ -187,8 +187,8 @@ importers:
         specifier: 5.7.0
         version: 5.7.0
       '@ethersproject/keccak256':
-        specifier: 5.7.0
-        version: 5.7.0
+        specifier: 5.8.0
+        version: 5.8.0
       '@ethersproject/strings':
         specifier: 5.7.0
         version: 5.7.0
@@ -557,9 +557,6 @@ packages:
 
   '@ethersproject/constants@5.8.0':
     resolution: {integrity: sha512-wigX4lrf5Vu+axVTIvNsuL6YrV4O5AXl5ubcURKMEME5TnWBouUh0CDTWxZ2GpnRn1kcCgE7l8O5+VbV9QTTcg==}
-
-  '@ethersproject/keccak256@5.7.0':
-    resolution: {integrity: sha512-2UcPboeL/iW+pSg6vZ6ydF8tCnv3Iu/8tUmLLzWWGzxWKFFqOBQFLo6uLUv6BDrLgCDfN28RJ/wtByx+jZ4KBg==}
 
   '@ethersproject/keccak256@5.8.0':
     resolution: {integrity: sha512-A1pkKLZSz8pDaQ1ftutZoaN46I6+jvuqugx5KYNeQOPqq+JZ0Txm7dlWesCHB5cndJSu5vP2VKptKf7cksERng==}
@@ -2034,11 +2031,6 @@ snapshots:
     dependencies:
       '@ethersproject/bignumber': 5.8.0
 
-  '@ethersproject/keccak256@5.7.0':
-    dependencies:
-      '@ethersproject/bytes': 5.7.0
-      js-sha3: 0.8.0
-
   '@ethersproject/keccak256@5.8.0':
     dependencies:
       '@ethersproject/bytes': 5.8.0
@@ -2231,7 +2223,7 @@ snapshots:
     dependencies:
       '@ethersproject/bignumber': 5.8.0
       '@ethersproject/bytes': 5.7.0
-      '@ethersproject/keccak256': 5.7.0
+      '@ethersproject/keccak256': 5.8.0
       '@zk-kit/incremental-merkle-tree': 1.1.0
 
   '@semaphore-protocol/group@4.14.2':
@@ -2246,7 +2238,7 @@ snapshots:
   '@semaphore-protocol/identity@3.15.0':
     dependencies:
       '@ethersproject/bignumber': 5.8.0
-      '@ethersproject/keccak256': 5.7.0
+      '@ethersproject/keccak256': 5.8.0
       '@ethersproject/random': 5.8.0
       '@ethersproject/strings': 5.7.0
       js-sha512: 0.8.0
@@ -2305,6 +2297,14 @@ snapshots:
       '@vitest/utils': 2.1.9
       chai: 5.3.3
       tinyrainbow: 1.2.0
+
+  '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@20.19.43))':
+    dependencies:
+      '@vitest/spy': 2.1.9
+      estree-walker: 3.0.3
+      magic-string: 0.30.21
+    optionalDependencies:
+      vite: 5.4.21(@types/node@20.19.43)
 
   '@vitest/mocker@2.1.9(vite@5.4.21(@types/node@22.7.5))':
     dependencies:
@@ -3110,7 +3110,7 @@ snapshots:
   rlnjs@3.2.0:
     dependencies:
       '@ethersproject/bytes': 5.7.0
-      '@ethersproject/keccak256': 5.7.0
+      '@ethersproject/keccak256': 5.8.0
       '@ethersproject/solidity': 5.8.0
       '@ethersproject/strings': 5.7.0
       '@semaphore-protocol/group': 3.10.1
@@ -3414,7 +3414,7 @@ snapshots:
   vitest@2.1.9(@types/node@20.19.43):
     dependencies:
       '@vitest/expect': 2.1.9
-      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@22.7.5))
+      '@vitest/mocker': 2.1.9(vite@5.4.21(@types/node@20.19.43))
       '@vitest/pretty-format': 2.1.9
       '@vitest/runner': 2.1.9
       '@vitest/snapshot': 2.1.9
