@@ -1,6 +1,6 @@
 {
   "name": "@ministryofmany/poll",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Framework-agnostic polling / decision engine: question types (single-choice, yes-no + quorum/supermajority, ranked IRV, multi-select schedule, commit-reveal, raffle, verdict), an audience gate over @ministryofmany/policy, unstuffable casting (a verified voter handle + a per-(poll, member) nullifier from @ministryofmany/nullifier, one-vote guarded by an insert-or-reject VoteStore), tally, resolve, and result views. All storage behind injectable PollStore / VoteStore interfaces - no ORM in the package.",
   "type": "module",
   "license": "MIT OR Apache-2.0",

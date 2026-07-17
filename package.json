@@ -1,6 +1,6 @@
 {
   "name": "@ministryofmany/client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "TypeScript SDK for OIDC relying parties authenticating users via Minister and consuming W3C verifiable-credential badges.",
   "type": "module",
   "license": "MIT OR Apache-2.0",
